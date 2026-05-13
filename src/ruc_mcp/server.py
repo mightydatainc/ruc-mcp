@@ -32,22 +32,6 @@ def server_description() -> str:
     )
 
 
-class RucMcpServer:
-    """Thin wrapper around the FastMCP instance for backward compatibility."""
-
-    def describe(self) -> str:
-        """Return a static scaffold description."""
-        return (
-            "Scaffold MCP server for splitting semantic interpretation from "
-            "deterministic execution."
-        )
-
-    def run(self) -> None:
-        """Start the FastMCP server using stdio transport."""
-        mcp.run(transport="stdio")
-
-
 def main() -> None:
     """Entrypoint for local development."""
-    server = RucMcpServer()
-    server.run()
+    mcp.run(transport="stdio")
