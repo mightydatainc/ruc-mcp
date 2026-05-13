@@ -13,7 +13,7 @@ class RucMcpServer:
             "deterministic execution."
         )
 
-    def classify_request(self, request_text: str) -> dict[str, str]:
+    def classify_request(self, request_text: str) -> dict[str, object]:
         """TODO: Classify user intent into LLM-shaped vs code-shaped work."""
         raise NotImplementedError("TODO: implement request classification")
 
