@@ -1,8 +1,8 @@
 """Tests for the FastMCP-backed RUC MCP server."""
 
+import asyncio
 import unittest
 
-import anyio
 import fastmcp
 
 from src.ruc_mcp.server import RucMcpServer, hello_world, mcp
@@ -28,13 +28,13 @@ class FastMcpInstanceTests(unittest.TestCase):
         async def get_tool_names() -> list[str]:
             return [tool.name for tool in await mcp.list_tools()]
 
-        self.assertEqual(anyio.run(get_tool_names), ["hello_world"])
+        self.assertEqual(asyncio.run(get_tool_names()), ["hello_world"])
 
     def test_no_prompts_are_registered(self) -> None:
         async def get_prompt_names() -> list[str]:
             return [prompt.name for prompt in await mcp.list_prompts()]
 
-        self.assertEqual(anyio.run(get_prompt_names), [])
+        self.assertEqual(asyncio.run(get_prompt_names()), [])
 
 
 class HelloWorldToolTests(unittest.TestCase):
