@@ -1,5 +1,5 @@
 """Render Unto Caesar MCP scaffold package."""
 
-from .server import hello_world, main, mcp, server_description
+from .server import hello_world, main, mcp
 
-__all__ = ["mcp", "hello_world", "server_description", "main"]
+__all__ = ["mcp", "hello_world", "main"]
