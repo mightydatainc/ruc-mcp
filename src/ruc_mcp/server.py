@@ -108,6 +108,8 @@ def ruc_execute_semantic_code_workflow(
         Field(
             description=(
                 "Optional JSON Schema describing the expected shape of the final result. "
+                "If not provided, RUC will decide for itself what an appropriate result schema "
+                "should be, based on the task description."
             )
         ),
     ] = None,
@@ -117,9 +119,11 @@ def ruc_execute_semantic_code_workflow(
             description=(
                 "Optional non-negotiable requirements the workflow must obey, and which might "
                 "not be immediately obvious from the task description. Use this to specify "
-                'hard constraints or stipulations, such as "Don\'t process duplcate records", '
-                'or "Make sure to validate the format of every input record", or '
-                '"Scrub personally identifiable information from the output".'
+                'hard constraints or stipulations, such as "Don\'t process repeated records", '
+                'or "Scrub personally identifiable information from the output", or '
+                '"Interpret dates as eight-digit numerical sequences in DDMMYYYY format". '
+                "Not all tasks will require this field, so feel free to leave it blank if "
+                "there are no special requirements."
             )
         ),
     ] = None,
