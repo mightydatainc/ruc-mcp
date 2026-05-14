@@ -96,6 +96,7 @@ class ExecuteSemanticCodeWorkflowToolTests(unittest.TestCase):
             {
                 "status": "not_implemented",
                 "message": "execute_semantic_code_workflow is not implemented yet.",
+                "execution_notes": "(no notes recorded during execution)",
             },
         )
         get_logger.return_value.info.assert_any_call(
@@ -128,7 +129,32 @@ class ExecuteSemanticCodeWorkflowToolTests(unittest.TestCase):
             )
 
         self.assertEqual(result["status"], "not_implemented")
+        self.assertEqual(
+            result["execution_notes"], "(no notes recorded during execution)"
+        )
         load_data.assert_awaited_once_with(sample_csv_uri, mock_ctx)
+
+    def test_records_datasource_load_failure_in_execution_notes(self) -> None:
+        sample_csv_uri = (
+            (Path(__file__).parent / "sample_data" / "customers.csv").resolve().as_uri()
+        )
+        mock_ctx = AsyncMock()
+
+        with patch(
+            "src.ruc_mcp.server._load_data_from_uri",
+            new=AsyncMock(side_effect=ValueError("boom")),
+        ):
+            result = asyncio.run(
+                ruc_execute_semantic_code_workflow(
+                    task_description="Classify support tickets by sentiment",
+                    ctx=mock_ctx,
+                    data_source_uris=[sample_csv_uri],
+                )
+            )
+
+        self.assertEqual(result["status"], "not_implemented")
+        self.assertIn("Failed to load data source", result["execution_notes"])
+        self.assertIn("boom", result["execution_notes"])
 
 
 class MainEntrypointTests(unittest.TestCase):

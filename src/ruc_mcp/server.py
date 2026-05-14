@@ -207,6 +207,15 @@ triple-backtick delimiter.
             ):
                 raise ValueError("restructure_data must return a list of dictionaries.")
 
+            if records:
+                logger.info(
+                    "First record keys for %s: %s",
+                    uri,
+                    sorted(records[0].keys()),
+                )
+            else:
+                logger.info("Restructure returned an empty list for %s", uri)
+
             logger.info(
                 "Restructured %d records from %s on attempt %d",
                 len(records),
@@ -341,17 +350,25 @@ async def ruc_execute_semantic_code_workflow(
 
     # First step: load the data from the indicated sources, if any.
     data_source_records = {}
+    execution_notes = ""
     data_source_uris = data_source_uris or []
     for data_source_uri in data_source_uris:
-        data_source_records[data_source_uri] = await _load_data_from_uri(
-            data_source_uri, ctx
-        )
+        try:
+            data_source_records[data_source_uri] = await _load_data_from_uri(
+                data_source_uri, ctx
+            )
+        except Exception as e:
+            note = f"Failed to load data source {data_source_uri}: {e}"
+            logger.warning(note)
+            execution_notes += f"{note}\n\n"
 
     logger.info("Data loading complete. Starting main workflow execution.")
 
     return {
         "status": "not_implemented",
         "message": "execute_semantic_code_workflow is not implemented yet.",
+        "execution_notes": execution_notes.strip()
+        or "(no notes recorded during execution)",
     }
 
 
