@@ -56,6 +56,31 @@ def configure_logging() -> None:
     )
 
 
+def _load_data_from_uri(uri: str) -> list[dict[str, Any]]:
+    """Load data from a given URI and return it as a list of records."""
+    logger = logging.getLogger(__name__)
+    logger.info("Loading data from URI: %s", uri)
+
+    if uri.startswith("file://"):
+        file_path = uri[len("file://") :]
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                # For simplicity, let's assume it's a CSV file and parse it accordingly.
+                # In a real implementation, you'd want to handle different formats and edge cases.
+                import csv
+
+                reader = csv.DictReader(f)
+                records = [row for row in reader]
+                logger.info("Loaded %d records from %s", len(records), uri)
+                return records
+        except Exception as e:
+            logger.error("Failed to load data from %s: %s", uri, e)
+            raise ValueError(f"Could not load data from {uri}: {e}")
+    else:
+        logger.error("Unsupported URI scheme in %s", uri)
+        raise ValueError(f"Unsupported URI scheme in {uri}")
+
+
 @mcp.tool()
 def ruc_hello_world(name: str = "World") -> str:
     """Return a Hello World greeting.
@@ -98,7 +123,10 @@ def ruc_execute_semantic_code_workflow(
         Field(
             description=(
                 "Optional indicators of one or more sources of data upon which to perform "
-                "the task. Currently only accepts file URIs with absolute paths, "
+                "the task. RUC will try to interpret each of these as a text-based collection "
+                "of records, such as a CSV file, a JSON file with a list of objects, a "
+                "SQL dump of a database table, etc. "
+                "Currently only accepts file URIs with absolute paths, "
                 "e.g. `file:///c/users/mvol/Documents/client_list.csv`"
             )
         ),
@@ -129,9 +157,17 @@ def ruc_execute_semantic_code_workflow(
     ] = None,
 ) -> dict[str, Any]:
     """Perform a RUC task."""
-    logging.getLogger(__name__).info(
-        "execute_semantic_code_workflow started for task: %s", task_description
-    )
+    logger = logging.getLogger(__name__)
+    logger.info("execute_semantic_code_workflow started for task: %s", task_description)
+
+    # First step: load the data from the indicated sources, if any.
+    data_source_records = {}
+    data_source_uris = data_source_uris or []
+    for data_source_uri in data_source_uris:
+        data_source_records[data_source_uri] = _load_data_from_uri(data_source_uri)
+
+    logger.info("Data loading complete. Starting main workflow execution.")
+
     return {
         "status": "not_implemented",
         "message": "execute_semantic_code_workflow is not implemented yet.",
