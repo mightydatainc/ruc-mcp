@@ -38,7 +38,7 @@ This repository currently contains a bare-bones scaffold only. It is intentional
 
 ## Scaffold layout
 
-- `src/ruc_mcp/server.py`: minimal FastMCP server scaffold with a single example tool.
+- `src/ruc_mcp/server.py`: minimal FastMCP server scaffold with a `hello_world` example tool and the `execute_semantic_code_workflow` stub.
 - `tests/test_server.py`: tests that verify the intentionally small public surface.
 
 ## Run tests
