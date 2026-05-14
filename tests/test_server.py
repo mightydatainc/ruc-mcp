@@ -8,7 +8,12 @@ from pathlib import Path
 
 import fastmcp
 
-from src.ruc_mcp.server import execute_semantic_code_workflow, hello_world, main, mcp
+from src.ruc_mcp.server import (
+    ruc_execute_semantic_code_workflow,
+    ruc_hello_world,
+    main,
+    mcp,
+)
 
 
 class FastMcpInstanceTests(unittest.TestCase):
@@ -33,7 +38,7 @@ class FastMcpInstanceTests(unittest.TestCase):
 
         self.assertEqual(
             asyncio.run(get_tool_names()),
-            sorted(["hello_world", "execute_semantic_code_workflow"]),
+            sorted(["ruc_hello_world", "ruc_execute_semantic_code_workflow"]),
         )
 
     def test_no_prompts_are_registered(self) -> None:
@@ -45,18 +50,18 @@ class FastMcpInstanceTests(unittest.TestCase):
 
 class HelloWorldToolTests(unittest.TestCase):
     def test_hello_world_default(self) -> None:
-        result = hello_world()
+        result = ruc_hello_world()
         self.assertEqual(result, "Hello, World!")
 
     def test_hello_world_custom_name(self) -> None:
-        result = hello_world(name="Caesar")
+        result = ruc_hello_world(name="Caesar")
         self.assertEqual(result, "Hello, Caesar!")
 
 
 class ExecuteSemanticCodeWorkflowToolTests(unittest.TestCase):
     def test_returns_not_implemented_payload(self) -> None:
         with patch("src.ruc_mcp.server.logging.getLogger") as get_logger:
-            result = execute_semantic_code_workflow(
+            result = ruc_execute_semantic_code_workflow(
                 task_description="Classify support tickets by sentiment"
             )
 
@@ -73,7 +78,7 @@ class ExecuteSemanticCodeWorkflowToolTests(unittest.TestCase):
         )
 
     def test_returns_not_implemented_payload_with_all_args(self) -> None:
-        result = execute_semantic_code_workflow(
+        result = ruc_execute_semantic_code_workflow(
             task_description="Classify support tickets by sentiment",
             context_explanation="Tickets are from a SaaS product help desk.",
             data_source_uris=["file:///data/tickets.csv"],

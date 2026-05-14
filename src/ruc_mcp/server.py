@@ -57,7 +57,7 @@ def configure_logging() -> None:
 
 
 @mcp.tool()
-def hello_world(name: str = "World") -> str:
+def ruc_hello_world(name: str = "World") -> str:
     """Return a Hello World greeting.
 
     Args:
@@ -75,7 +75,7 @@ def hello_world(name: str = "World") -> str:
         "across records, files, or other repeatable inputs."
     ),
 )
-def execute_semantic_code_workflow(
+def ruc_execute_semantic_code_workflow(
     task_description: Annotated[
         str,
         Field(
