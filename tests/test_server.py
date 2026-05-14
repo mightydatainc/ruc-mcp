@@ -3,9 +3,9 @@
 import asyncio
 import logging
 import unittest
-from typing import cast
-from unittest.mock import patch
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import fastmcp
 
@@ -68,15 +68,27 @@ class ExecuteSemanticCodeWorkflowToolTests(unittest.TestCase):
         sample_csv_uri = (
             (Path(__file__).parent / "sample_data" / "customers.csv").resolve().as_uri()
         )
+        mock_ctx = AsyncMock()
+        mock_ctx.sample = AsyncMock(
+            return_value=SimpleNamespace(
+                text="""Plan\n```python\ndef restructure_data(data_str):\n    return [{\"raw_length\": len(data_str)}]\n```"""
+            )
+        )
 
-        records = _load_data_from_uri(sample_csv_uri)
+        records = asyncio.run(_load_data_from_uri(sample_csv_uri, mock_ctx))
 
         self.assertGreater(len(records), 0)
+        self.assertIsInstance(records[0], dict)
+        mock_ctx.sample.assert_awaited_once()
 
     def test_returns_not_implemented_payload(self) -> None:
+        mock_ctx = AsyncMock()
         with patch("src.ruc_mcp.server.logging.getLogger") as get_logger:
-            result = ruc_execute_semantic_code_workflow(
-                task_description="Classify support tickets by sentiment"
+            result = asyncio.run(
+                ruc_execute_semantic_code_workflow(
+                    task_description="Classify support tickets by sentiment",
+                    ctx=mock_ctx,
+                )
             )
 
         self.assertEqual(
@@ -95,19 +107,28 @@ class ExecuteSemanticCodeWorkflowToolTests(unittest.TestCase):
         sample_csv_uri = (
             (Path(__file__).parent / "sample_data" / "customers.csv").resolve().as_uri()
         )
+        mock_ctx = AsyncMock()
 
-        result = ruc_execute_semantic_code_workflow(
-            task_description="Classify support tickets by sentiment",
-            context_explanation="Tickets are from a SaaS product help desk.",
-            data_source_uris=[sample_csv_uri],
-            expected_result_schema={
-                "type": "object",
-                "properties": {"sentiment": {"type": "string"}},
-            },
-            behavioral_requirements=["process every row exactly once"],
-        )
+        with patch(
+            "src.ruc_mcp.server._load_data_from_uri",
+            new=AsyncMock(return_value=[{"id": "1"}]),
+        ) as load_data:
+            result = asyncio.run(
+                ruc_execute_semantic_code_workflow(
+                    task_description="Classify support tickets by sentiment",
+                    ctx=mock_ctx,
+                    context_explanation="Tickets are from a SaaS product help desk.",
+                    data_source_uris=[sample_csv_uri],
+                    expected_result_schema={
+                        "type": "object",
+                        "properties": {"sentiment": {"type": "string"}},
+                    },
+                    behavioral_requirements=["process every row exactly once"],
+                )
+            )
 
         self.assertEqual(result["status"], "not_implemented")
+        load_data.assert_awaited_once_with(sample_csv_uri, mock_ctx)
 
 
 class MainEntrypointTests(unittest.TestCase):
