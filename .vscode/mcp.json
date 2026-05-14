@@ -1,13 +1,13 @@
 {
   "servers": {
-    "ruc-mcp": {
+    "Render Unto Caesar": {
       "type": "stdio",
       "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
       "cwd": "${workspaceFolder}",
-      "args": ["-m", "ruc_mcp.server"],
+      "args": ["-m", "ruc_mcp"],
       "env": {
-        "RUC_MCP_LOG_LEVEL": "DEBUG",
-        "RUC_MCP_LOG_FILE": "${workspaceFolder}\\ruc-mcp.log"
+        "PYTHONPATH": "${workspaceFolder}\\src",
+        "RUC_MCP_LOG_LEVEL": "DEBUG"
       }
     }
   }
