@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+import os
+from pathlib import Path
 from typing import Annotated, Any
 
 import fastmcp
@@ -22,12 +25,35 @@ mcp: fastmcp.FastMCP = fastmcp.FastMCP(
         "to keep the whole process in conversational memory. Use RUC to run a "
         "procedural workflow that loops over the tickets and aggregates counts, "
         "while delegating only the tone classification step to an LLM-style semantic "
-        "function. "
+        "function."
         "\n\n"
-        "Prefer RUC for tasks where the semantic question is fuzzy, but the execution "
+        "RUC is ideal for tasks where the semantic question is fuzzy, but the execution "
         "must be exact."
+        "\n\n"
+        'Note that tasks suitable to RUC might sometimes "sneak up" on you. That is, '
+        "a user might ask for what seems like a straightforward LLM task, but once you "
+        "start to implement it, you realize that there are hidden complexities that make "
+        "it a better fit for RUC. That happens often! RUC is very flexible, and is designed "
+        "to accommodate a wide range of use cases."
     ),
 )
+
+
+def configure_logging() -> None:
+    """Write runtime logs to a fresh file on each launch and echo to stderr."""
+    log_level_name = os.getenv("RUC_MCP_LOG_LEVEL", "INFO").upper()
+    log_level = getattr(logging, log_level_name, logging.INFO)
+    log_file_path = Path(os.getenv("RUC_MCP_LOG_FILE", "ruc-mcp.log"))
+
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=[
+            logging.FileHandler(log_file_path, mode="w", encoding="utf-8"),
+            logging.StreamHandler(),
+        ],
+        force=True,
+    )
 
 
 @mcp.tool()
@@ -71,8 +97,9 @@ def execute_semantic_code_workflow(
         list[str] | None,
         Field(
             description=(
-                "Optional indicators of one or more sources of data upon which to perform the task. "
-                "Currently only accepts file URIs with absolute paths, e.g. `file:///c/users/mvol/Documents/client_list.csv`"
+                "Optional indicators of one or more sources of data upon which to perform "
+                "the task. Currently only accepts file URIs with absolute paths, "
+                "e.g. `file:///c/users/mvol/Documents/client_list.csv`"
             )
         ),
     ] = None,
@@ -88,17 +115,27 @@ def execute_semantic_code_workflow(
         list[str] | None,
         Field(
             description=(
-                "Optional non-negotiable requirements the workflow must obey, such as "
-                "'process every row exactly once', 'preserve source row IDs', "
-                "'do not modify input files', or 'include low-confidence cases separately'."
+                "Optional non-negotiable requirements the workflow must obey, and which might "
+                "not be immediately obvious from the task description. Use this to specify "
+                'hard constraints or stipulations, such as "Don\'t process duplcate records", '
+                'or "Make sure to validate the format of every input record", or '
+                '"Scrub personally identifiable information from the output".'
             )
         ),
     ] = None,
 ) -> dict[str, Any]:
     """Perform a RUC task."""
-    raise NotImplementedError
+    logging.getLogger(__name__).info(
+        "execute_semantic_code_workflow started for task: %s", task_description
+    )
+    return {
+        "status": "not_implemented",
+        "message": "execute_semantic_code_workflow is not implemented yet.",
+    }
 
 
 def main() -> None:
     """Entrypoint for local development."""
+    configure_logging()
+    logging.getLogger(__name__).info("Starting RUC MCP server over stdio")
     mcp.run(transport="stdio")
