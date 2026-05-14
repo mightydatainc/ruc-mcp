@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from pathlib import Path
@@ -76,7 +77,32 @@ def _extract_python_code_block(response_text: str) -> str:
     raise ValueError("Sampling response did not include an executable code block.")
 
 
-async def _load_data_from_uri(uri: str, ctx: fastmcp.Context) -> list[dict[str, Any]]:
+def _construct_data_source_previews(
+    data_source_records: dict[str, list[dict[str, Any]]],
+) -> list[str]:
+    """Construct limited-length previews of JSON dumps of the data collections,
+    suitable for inclusion in user messages to the LLM."""
+    previews = []
+    MAX_CHARACTERS_PER_SOURCE = 5000
+    for uri, records in data_source_records.items():
+        preview_str = f"Data source: {uri}\n"
+        preview_str += (
+            f"JSON dump preview (first {MAX_CHARACTERS_PER_SOURCE} characters):\n\n"
+        )
+        try:
+            records_str = json.dumps(records, indent=2)
+            if len(records_str) > MAX_CHARACTERS_PER_SOURCE:
+                records_str = records_str[:MAX_CHARACTERS_PER_SOURCE] + "..."
+            preview_str += f"\n\n{records_str}"
+        except Exception as e:
+            preview_str += (
+                f"\n\n(Could not generate preview of records due to error: {e})"
+            )
+        previews.append(preview_str)
+    return previews
+
+
+async def _load_data_from_uri(ctx: fastmcp.Context, uri: str) -> list[dict[str, Any]]:
     """Load data from a given URI and return it as a list of records."""
     logger = logging.getLogger(__name__)
     logger.info("Loading data from URI: %s", uri)
@@ -274,14 +300,10 @@ triple-backtick delimiter.
     )
 
 
-@mcp.tool()
-def ruc_hello_world(name: str = "World") -> str:
-    """Return a Hello World greeting.
-
-    Args:
-        name: The name to greet.
-    """
-    return f"Hello, {name}!"
+async def _write_workflow(ctx: fastmcp.Context, convo: list[str]):
+    """Write a Python function that performs a procedural workflow that includes
+    "fuzzy" operations."""
+    logger = logging.getLogger(__name__)
 
 
 @mcp.tool(
@@ -294,6 +316,7 @@ def ruc_hello_world(name: str = "World") -> str:
     ),
 )
 async def ruc_execute_semantic_code_workflow(
+    ctx: fastmcp.Context,
     task_description: Annotated[
         str,
         Field(
@@ -302,7 +325,6 @@ async def ruc_execute_semantic_code_workflow(
             )
         ),
     ],
-    ctx: fastmcp.Context,
     context_explanation: Annotated[
         str | None,
         Field(
@@ -325,7 +347,7 @@ async def ruc_execute_semantic_code_workflow(
             )
         ),
     ] = None,
-    expected_result_schema: Annotated[
+    desired_result_schema: Annotated[
         dict[str, Any] | None,
         Field(
             description=(
@@ -361,7 +383,7 @@ async def ruc_execute_semantic_code_workflow(
     for data_source_uri in data_source_uris:
         try:
             data_source_records[data_source_uri] = await _load_data_from_uri(
-                data_source_uri, ctx
+                ctx, data_source_uri
             )
         except Exception as e:
             note = f"Failed to load data source {data_source_uri}: {e}"
@@ -369,6 +391,50 @@ async def ruc_execute_semantic_code_workflow(
             execution_notes += f"{note}\n\n"
 
     logger.info("Data loading complete. Starting main workflow execution.")
+
+    data_previews = _construct_data_source_previews(data_source_records)
+
+    # Build the basic conversational context for the workflow execution. This will be fed into the LLM
+    # as part of the prompt, and will serve as the definition of this task.
+
+    convo = [f"TASK:\n\n{task_description}"]
+
+    if context_explanation:
+        convo.append(
+            'Here is some context to help you understand the "big picture" of this task, '
+            "including background information or an explanation about *why* it's being run:"
+            "\n\n"
+            f"{context_explanation}"
+        )
+
+    if behavioral_requirements:
+        convo.append(
+            "Here are some specific requirements and constraints that the execution of this task "
+            "must adhere to:"
+            "\n\n" + "\n\n".join(f"- {req}" for req in behavioral_requirements)
+        )
+
+    if desired_result_schema:
+        convo.append(
+            "The final result of this execution should adhere to this expected schema:"
+            "\n\n" + json.dumps(desired_result_schema, indent=2)
+        )
+
+    if data_previews and len(data_previews) > 0:
+        convo.append(
+            f"I'll now, over the next few messages, show you {len(data_previews)} data sources, "
+            "which the task presumably expects you to rely on. I'll show you a truncated "
+            "preview of the contents of each data source, to help you understand what kind of "
+            "data you're working with."
+        )
+        for preview in data_previews:
+            convo.append(preview)
+
+    pycode = await _write_workflow(ctx, convo)
+
+    # For now, just log the generated code and return a placeholder response, since the main point of this POC is to demonstrate the code generation aspect of RUC. The production version of this function will need to execute the
+    # generated code in a sandboxed environment and return the actual results of that execution.
+    logger.info("Generated workflow code:\n%s", pycode)
 
     return {
         "status": "not_implemented",

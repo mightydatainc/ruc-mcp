@@ -120,7 +120,7 @@ class ExecuteSemanticCodeWorkflowToolTests(unittest.TestCase):
                     ctx=mock_ctx,
                     context_explanation="Tickets are from a SaaS product help desk.",
                     data_source_uris=[sample_csv_uri],
-                    expected_result_schema={
+                    desired_result_schema={
                         "type": "object",
                         "properties": {"sentiment": {"type": "string"}},
                     },
