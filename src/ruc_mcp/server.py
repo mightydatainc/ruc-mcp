@@ -116,7 +116,7 @@ async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict:
     brainstorm_sample_result = await ctx.sample(
         messages=convo,
         system_prompt=system_prompt + (
-            "\n\n"            
+            "\\n\\n"            
             "Brainstorm the question first, providing chain-of-thought reasoning to ensure "
             "you provide a well-thought-out answer. At the end of your consideration and "
             "reasoning, provide a final answer. Don't worry about formatting the final answer "
@@ -127,7 +127,7 @@ async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict:
     )
     brainstorm_text = brainstorm_sample_result.text
 
-    convo.append("LLM's brainstorm and reasoning:\n" + brainstorm_text)
+    convo.append("LLM's brainstorm and reasoning:\\n" + brainstorm_text)
     convo.append(
         "Now, based on the above brainstorm and reasoning, provide a final answer to the "
         "question in a structured format as a JSON object."
@@ -635,11 +635,11 @@ so that I can just string-replace your code directly into my function.
     # Now we have the code snippet for the result type declaration. Let's insert it into the
     # stub function template.
     # Make sure we get the initial indent level correct, because Python is sensitive about that.
-    # The rest of the indentation doesn't matter, only the first line's indentation.
-    resulttype_pysnippet = "    " + resulttype_pysnippet.strip()
+    # Fortunately, we don't have to think too hard about this, because the replacement operation
+    # preserves the whitespace before "result_type = ..." exactly as it is in the template.
     stubfunction = stubfunction.replace(
         "result_type = pydantic.create_model(TODO_PROVIDE_PYDANTIC_MODEL_ARGS_HERE)",
-        resulttype_pysnippet,
+        resulttype_pysnippet.strip(),
     )
 
     # Next, let's do something about that system prompt.
