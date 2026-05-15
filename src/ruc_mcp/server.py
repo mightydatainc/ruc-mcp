@@ -49,44 +49,61 @@ In today's work session, you'll write a Python function called `execute_workflow
 It will adhere to the following calling convention and structure:
 
 ```python
-def execute_workflow(data_source_records: dict[str, list[Any]]):
+async def execute_workflow(data_source_records: dict[str, list[Any]], ctx: fastmcp.Context):
     # TODO: Implement the task here
     # ...
-    # value of "result" can be any list or dict, as long as it's JSON serializable
-    return {"result": ...}
+    return retval # "retval" is some JSON-serializable dict or list.
 ```
 
 The Python environment you'll be running in is a default Python 3.11 install.
-You can import default packages like `json` or `csv`, but you don't have access to
-fancy advanced tools like dataframes. Also, it's running in a restricted environment,
-so you can't access the network or the filesystem (not that you should need such things
-for a data restructuring operation). 
+You can import default packages like `json` or `csv`, but you don't have access to fancy
+advanced tools like dataframes. Also, it's running in a restricted environment, so you
+can't access the network or the filesystem (not that you should need such things for a
+data restructuring operation). 
+
+The one exception is that this environment *does* have a library called FastMCP installed,
+so you can `import fastmcp` and declare `ctx: fastmcp.Context` in your type signature.
+You shouldn't need to actually *use* the FastMCP library (we'll add calls to the LLM 
+ourselves in a later pass), but the Context object will be passed into your function,
+so I figure you'll want it for type signature purposes.
+
+The "ctx" argument is a FastMCP Context object. It's what we'll be using to communicate
+with the LLM. Don't worry about it for now. We only provide it here because we'll need to
+pass it through to the LLM calling function stubs. More on that later.
 
 You may, of course, write whatever support or helper functions you might need.
 
-In an ideal world, you should be able to implement the entire task using only conventional code,
-possibly with the help of heuristic tricks involving regexes or string operations where necessary.
+In an ideal world, you should be able to implement the entire task using only conventional
+code, possibly with the help of heuristic tricks involving regexes or string operations
+where necessary.
+
 However, in practice, some portion (or multiple portions) of this task might require judgment
 calls, inference, reconciliation of noisy or ambiguous information, and other tasks that are
 more suitable to an LLM than to a Python function.
 
 If you come across such operational requirements, then here's what I want you to do:
-Invent ad-hoc functions on the fly that would hypothetically send an LLM call.
-Each such function should take a single JSON-serializable object as an argument
-(call it just "arg"), and will produce some kind of simple structured output as a reply.
-Whenever you invent such an ad-hoc function, write a placeholder stub for it, and 
-describe in a TODO statement what you'd imagine that the function will do. (Make the body of the
-function throw a NotImplementedError with a message stating the function's name and explaining
-what it would do if it were in fact implemented.)
+Invent async ad-hoc functions on the fly that would hypothetically send an LLM call. Each such
+function should take a single JSON-serializable object as an argument (call it just "arg") and the
+FastMCP Context object ("ctx"), and will return some kind of simple structured output as a reply.
+Whenever you invent such an ad-hoc function, write a placeholder stub for it, and describe in a
+TODO statement what you'd imagine that the function will do. Make the body of the function throw
+a NotImplementedError with a message saying what the function is and what it would do if it were
+in fact implemented. Declare them with `async def`, and call them with `await` -- just like normal
+async functions, even though they won't actually do anything yet.
 
-In fact, to make it easier to find these stub functions later, please use a special syntax
-for the TODO statement: "TODO(llm_stub: stub_function_name): lorem ipsum dolor logit es..."
-In other words, mark the TODO with the special label "llm_stub", followed by the name of the
-function, and then a description of what the function would ask the LLM to do -- using the
-formatting exactly as shown.
+To make it easier to find these stub functions later, use a special syntax for the TODO statement:
+"TODO(llm_stub: stub_function_name): lorem ipsum dolor logit es..." In other words, mark the TODO
+with the special label "llm_stub", followed by the name of the function, and then a description of
+what the function would ask the LLM to do -- using the formatting exactly as shown.
+
+Put all such stub functions at the end of your code. They, as well as the main workflow function
+`execute_workflow`, must be at the top level of the module, i.e. not nested inside any other
+function or class. I should be able to copy-paste your entire code into a Python environment and
+run `execute_workflow(...)` without having to look for it inside a namespace or a class or 
+something.
 
 PRO TIP: Don't write stubs for functions that you don't plan to call. We *will* fill out their
-implementations shortly, so don't byass or avoid these stub functions simply in the interest of
+implementations shortly, so don't bypass or avoid these stub functions simply in the interest of
 writing code that works "for now". Treat the stub functions as though they actually do indeed
 work in the here and now.
 """
@@ -475,16 +492,17 @@ async def _replace_stub_with_implementation(
     logger.info("Asking model to implement stub function %s", stubname)
 
     convo.append(f"""
-Oh shoot, I'm so sorry -- I hit the delete button by accident and deleted your entire response.
+Oh shoot, I'm so sorry -- I hit the Back button by accident and deleted your entire response.
 I lost your whole reasoning process and self-discussion. From your POV, the conversation probably
 has a major discontinuity. I apologize for the confusion.
 
 But that's okay, because I had copy-pasted the code you wrote.
 
 I was just in the process of filling in those stub functions. If you see any functions marked
-`_obsolete_stub`, that's me -- that's my way of checking off the stubs I've completed as I go
-(marking for deletion later). (If you don't see any `_obsolete_stub` functions, then that's
-probably because I haven't gotten to any of them yet.)
+`<function_name>_obsolete_stub`, that's me -- that's my way of checking off the stubs I've
+completed as I go (marking for deletion later). (If you don't see any 
+`<function_name>_obsolete_stub` functions, then that's probably because I haven't gotten to
+any of them yet.)
 
 Check it out.
 
@@ -492,6 +510,21 @@ Check it out.
 {pycode}
 ```
 """)
+
+    # Now that we've shown the current state of the code back to the model,
+    # neuter the stub function by renaming it to {stubname}_obsolete_stub,
+    # so that its definition won't interfere with the next round of code generation
+    # for the real implementation.
+    pycode = pycode.replace(f"def {stubname}(", f"def {stubname}_obsolete_stub(")
+
+    # foo = await ctx.sample(
+    #     messages=convo,
+    #     system_prompt=RUC_FUNCTION_WRITING_SYSTEM_PROMPT,
+    #     max_tokens=20_000,
+    #     result_type=
+    # )
+    # print(foo)
+
     # TODO: Left off coding here.
     return pycode
 
@@ -504,6 +537,9 @@ async def _replace_all_stubs_with_implementations(
     """Find any stub functions in the given code, and replace them with real implementations."""
     logger = logging.getLogger(__name__)
     convo = json.loads(json.dumps(convo))  # Deep-copy to ensure mutability.
+
+    logger.info("Looking for stub functions to implement in the generated code.")
+    logger.info(json.dumps(convo, indent=2))
 
     # We marked these stub functions with a special syntax in the TODO comment, so we can grep for them.
     # The syntax is "TODO(llm_stub: stub_function_name): description of what the function should do".
