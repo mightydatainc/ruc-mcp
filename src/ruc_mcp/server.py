@@ -127,6 +127,8 @@ async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict:
         max_tokens=5000,
     )
     brainstorm_text = brainstorm_sample_result.text
+    if not brainstorm_text:
+        raise ValueError("LLM returned no text in response to the brainstorm prompt.")
 
     convo.append("LLM's brainstorm and reasoning:\\n" + brainstorm_text)
     convo.append(
