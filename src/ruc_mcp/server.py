@@ -697,7 +697,7 @@ triple-backticks labeled "```systemprompt".
     # is to give it a JSONized string and parse it in the function.
     stubfunction = stubfunction.replace(
         '"TODO PASTE SYSTEM PROMPT CONTENTS HERE"',
-        f"json.loads({json.dumps(sysprompt)})",
+        json.dumps(sysprompt),
     )
 
     return stubfunction
@@ -952,8 +952,17 @@ async def ruc_execute_semantic_code_workflow(
 
     logger.info(f"Running workflow code now. This may take a moment...")
 
-    runresult = await _execute_workflow_code(ctx, pycode, data_source_records)
-    logger.info(f"Workflow execution result: {runresult}")
+    try:
+        runresult = await _execute_workflow_code(ctx, pycode, data_source_records)
+        logger.info(f"Workflow execution result: {runresult}")
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": "Workflow execution failed.",
+            "details": str(e),
+            "execution_notes": execution_notes.strip()
+            or "(no notes recorded during execution)",
+        }
 
     return {
         "status": "success",
