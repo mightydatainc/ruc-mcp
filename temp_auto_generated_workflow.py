@@ -2,161 +2,103 @@ import fastmcp
 import json
 import pydantic
 
-import math
+import json
 from typing import Any
-
 import fastmcp
 
 
-async def execute_workflow(
-    data_source_records: dict[str, list[Any]], ctx: fastmcp.Context
-):
-    rows: list[Any] = []
-    for _source_name, source_rows in data_source_records.items():
-        if isinstance(source_rows, list):
-            rows = source_rows
-            break
+async def execute_workflow(data_source_records: dict[str, list[Any]], ctx: fastmcp.Context):
+    all_rows: list[dict[str, Any]] = []
 
-    total_rows = 0
+    for rows in data_source_records.values():
+        if isinstance(rows, list):
+            for row in rows:
+                if isinstance(row, dict):
+                    all_rows.append(row)
+
+    unique_rows: list[dict[str, Any]] = []
+    seen_row_fingerprints: set[str] = set()
+
+    for row in all_rows:
+        fingerprint = _record_fingerprint(row)
+        if fingerprint in seen_row_fingerprints:
+            continue
+        seen_row_fingerprints.add(fingerprint)
+        unique_rows.append(row)
+
+    irish_sounding_customers: list[dict[str, str]] = []
     irish_sounding_count = 0
-    irish_sounding_customers: list[dict[str, Any]] = []
+    non_irish_sounding_count = 0
 
-    for row in rows:
-        total_rows += 1
+    classification_cache: dict[str, dict[str, Any]] = {}
 
-        if isinstance(row, dict):
-            customer_id = str(row.get("Customer ID", ""))
-            first_name = str(row.get("First Name", ""))
-            last_name = str(row.get("Last Name", ""))
+    for row in unique_rows:
+        full_name = _extract_full_name(row)
+        cache_key = full_name.strip().lower() if full_name else f"__row__:{_record_fingerprint(row)}"
+
+        if cache_key in classification_cache:
+            llm_result = classification_cache[cache_key]
         else:
-            customer_id = ""
-            first_name = ""
-            last_name = ""
-
-        llm_arg = {
-            "first_name": first_name,
-            "last_name": last_name,
-        }
-        llm_result = await classify_irish_sounding_name(llm_arg, ctx)
+            llm_result = await classify_name_irish_sounding(
+                {"name": full_name, "record": row},
+                ctx,
+            )
+            classification_cache[cache_key] = llm_result
 
         is_irish = bool(llm_result.get("is_irish_sounding", False))
-        confidence_raw = llm_result.get("confidence", 0.0)
-        reason_raw = llm_result.get("reason", "")
-
-        try:
-            confidence = float(confidence_raw)
-            if math.isnan(confidence) or math.isinf(confidence):
-                confidence = 0.0
-        except (TypeError, ValueError):
-            confidence = 0.0
-
-        reason = str(reason_raw)
+        reason = str(llm_result.get("reason", ""))
 
         if is_irish:
             irish_sounding_count += 1
             irish_sounding_customers.append(
                 {
-                    "customer_id": customer_id,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "confidence": confidence,
+                    "name": full_name,
                     "reason": reason,
                 }
             )
+        else:
+            non_irish_sounding_count += 1
 
-    non_irish_sounding_count = total_rows - irish_sounding_count
-
-    retval = {
+    return {
         "summary": {
-            "total_rows": total_rows,
+            "total_rows": len(unique_rows),
             "irish_sounding_count": irish_sounding_count,
             "non_irish_sounding_count": non_irish_sounding_count,
         },
         "irish_sounding_customers": irish_sounding_customers,
     }
-    return retval
 
 
-async def classify_irish_sounding_name_obsolete_stub(
-    arg: dict[str, Any], ctx: fastmcp.Context
-) -> dict[str, Any]:
-    # TODO(llm_stub: classify_irish_sounding_name): Given only first_name and last_name, ask an LLM to classify whether the name is Irish-sounding using common Irish onomastics, and return {"is_irish_sounding": bool, "confidence": float, "reason": str}.
+def _extract_full_name(row: dict[str, Any]) -> str:
+    full_name = str(row.get("Full Name", "")).strip()
+    if full_name:
+        return full_name
+
+    first = str(row.get("First Name", "")).strip()
+    last = str(row.get("Last Name", "")).strip()
+    combined = f"{first} {last}".strip()
+    if combined:
+        return combined
+
+    fallback = str(row.get("Name", "")).strip()
+    return fallback
+
+
+def _record_fingerprint(row: dict[str, Any]) -> str:
+    try:
+        return json.dumps(row, sort_keys=True, ensure_ascii=False, default=str)
+    except Exception:
+        # Fallback if row contains non-JSON-serializable values.
+        items = sorted((str(k), str(v)) for k, v in row.items())
+        return json.dumps(items, ensure_ascii=False)
+
+
+async def classify_name_irish_sounding_obsolete_stub(arg: dict[str, Any], ctx: fastmcp.Context) -> dict[str, Any]:
+    # TODO(llm_stub: classify_name_irish_sounding): Determine whether the provided customer full name is Irish-sounding, and return structured output like {"is_irish_sounding": bool, "reason": str}.
     raise NotImplementedError(
-        "classify_irish_sounding_name is a placeholder LLM call; it would classify a first+last name as Irish-sounding or not and return structured confidence and reason."
+        "classify_name_irish_sounding is a placeholder for an LLM call that classifies a customer name as Irish-sounding or not and provides a reason."
     )
 
-
-async def classify_irish_sounding_name(arg: dict, ctx: fastmcp.Context) -> dict:
-    system_prompt = 'You are an expert linguistic classifier for personal names.\n\nTask:\nClassify whether a full name is Irish-sounding using only:\n- first_name\n- last_name\n\nInput:\nYou will receive a JSON object with keys:\n- "first_name"\n- "last_name"\n\nDecision rule:\n- Determine whether the combined full name sounds Irish based on common Irish onomastics (typical Irish given-name and surname patterns/usage).\n- This is a fuzzy linguistic judgment, not a claim about ethnicity, nationality, or identity.\n- Do not use any fields other than first_name and last_name.\n- Do not invent external facts about the person.\n\nOutput requirements:\nReturn a judgment with:\n1) is_irish_sounding: boolean\n2) confidence: float in [0.0, 1.0]\n3) reason: brief plain-English explanation grounded only in name-origin cues from first and last name (max ~1-3 sentences, no markdown)\n\nConfidence guidance:\n- High (0.80\u20131.00): strong Irish onomastic signal in first and/or last name.\n- Medium (0.50\u20130.79): mixed or plausible Irish signal with some ambiguity.\n- Low (0.00\u20130.49): weak or no Irish signal.\n\nQuality constraints:\n- Be consistent and deterministic in applying the same criteria.\n- If ambiguous, choose the best-supported label and lower confidence.\n- Keep explanation concise and specific to the provided names.'
-
-    convo = [json.dumps(arg, indent=2)]
-
-    brainstorm_sample_result = await ctx.sample(
-        messages=convo,
-        system_prompt=system_prompt
-        + (
-            "\n\n"
-            "Brainstorm the question first, providing chain-of-thought reasoning to ensure "
-            "you provide a well-thought-out answer. At the end of your consideration and "
-            "reasoning, provide a final answer. Don't worry about formatting the final answer "
-            "in a particular way, just provide it in a clear and concise manner. We'll have "
-            "you formalize the output in the correct format in a later step."
-        ),
-        max_tokens=5000,
-    )
-    brainstorm_text = brainstorm_sample_result.text
-    if not brainstorm_text:
-        raise ValueError("LLM returned no text in response to the brainstorm prompt.")
-
-    convo.append("LLM's brainstorm and reasoning:\n" + brainstorm_text)
-    convo.append(
-        "Now, based on the above brainstorm and reasoning, provide a final answer to the "
-        "question in a structured format as a JSON object."
-    )
-
-    result_type = pydantic.create_model(
-        "IrishSoundingNameClassification",
-        is_irish_sounding=(
-            bool,
-            pydantic.Field(
-                ...,
-                description=(
-                    "True if the full name (using only first_name and last_name) sounds Irish "
-                    "based on common Irish onomastics; otherwise False."
-                ),
-            ),
-        ),
-        confidence=(
-            float,
-            pydantic.Field(
-                ...,
-                ge=0.0,
-                le=1.0,
-                description=(
-                    "Confidence score for the classification on a 0.0 to 1.0 scale, where 1.0 is highest confidence."
-                ),
-            ),
-        ),
-        reason=(
-            str,
-            pydantic.Field(
-                ...,
-                min_length=1,
-                max_length=300,
-                description=(
-                    "Brief explanation of the decision grounded in name-origin cues from first and last name only."
-                ),
-            ),
-        ),
-    )
-
-    formal_structured_sample_result = await ctx.sample(
-        messages=convo,
-        system_prompt=system_prompt,
-        max_tokens=5000,
-        result_type=result_type,
-    )
-    return formal_structured_sample_result.result.model_dump()
 
 
 async def ruc_submit_sample_request_to_llm(
@@ -207,6 +149,7 @@ async def ruc_submit_sample_request_to_llm(
     if len(split_on_json) < 2:
         raise ValueError(
             "LLM did not include a JSON code block in its response to the structured output prompt."
+            "Here's what it said instead: " + formal_structured_text
         )
 
     json_block_and_after = split_on_json[1]
@@ -222,18 +165,17 @@ async def ruc_submit_sample_request_to_llm(
         raise ValueError("LLM's JSON code block could not be parsed as JSON.") from e
 
 
-async def TODO_PROVIDE_FUNCTION_NAME(
-    arg: dict, ctx: fastmcp.Context
-) -> dict | list | str | int | float | bool:
-    system_prompt = "TODO PASTE SYSTEM PROMPT CONTENTS HERE"
+
+
+async def classify_name_irish_sounding(arg: dict, ctx: fastmcp.Context) -> dict:
+    system_prompt = "You are a strict name-origin classifier for data processing.\n\nTask:\nGiven an input JSON object containing a customer name (typically in `name`, possibly with fields in `record`), decide whether the full name is Irish-sounding.\n\nDefinition of Irish-sounding:\nA name is Irish-sounding if the given name and/or surname strongly matches common Irish/Gaelic naming patterns, such as:\n- Gaelic given names (e.g., Saoirse, Cian, Niamh, Aoife, Ronan, Siobhan, Declan, Maeve, Eoin, Aisling, Padraig, Caoimhe, Finbarr, Brigid)\n- Common Irish surnames and variants (e.g., O'Connell, Murphy, Doherty, Byrne, McCarthy, Gallagher, Reilly, O'Neill, Fitzpatrick, Keane, Quinn, Walsh, Kelly, Roche)\n- Recognizable Irish orthographic patterns (e.g., O', Mc/Mac, certain Gaelic spellings)\n\nImportant constraints:\n- Classify only from name patterns; do not infer nationality, ethnicity, or citizenship.\n- Be conservative on ambiguous/global names: mark true only when Irish signal is reasonably strong.\n- If name is missing/blank/unusable, return false with a brief reason.\n\nReasoning behavior:\n- Think carefully before answering.\n- If asked to brainstorm, provide analytical reasoning.\n- When asked for structured output, return only the final structured answer.\n\nStructured output requirements:\nReturn a JSON object with exactly:\n- `is_irish_sounding`: boolean\n- `reason`: one concise factual sentence (8\u2013240 chars), referencing name pattern evidence.\nNo extra keys. No markdown."
 
     convo = [json.dumps(arg, indent=2)]
 
     brainstorm_sample_result = await ctx.sample(
         messages=convo,
-        system_prompt=system_prompt
-        + (
-            "\\n\\n"
+        system_prompt=system_prompt + (
+            "\n\n"            
             "Brainstorm the question first, providing chain-of-thought reasoning to ensure "
             "you provide a well-thought-out answer. At the end of your consideration and "
             "reasoning, provide a final answer. Don't worry about formatting the final answer "
@@ -246,13 +188,39 @@ async def TODO_PROVIDE_FUNCTION_NAME(
     if not brainstorm_text:
         raise ValueError("LLM returned no text in response to the brainstorm prompt.")
 
-    convo.append("LLM's brainstorm and reasoning:\\n" + brainstorm_text)
+    convo.append("LLM's brainstorm and reasoning:\n" + brainstorm_text)
     convo.append(
         "Now, based on the above brainstorm and reasoning, provide a final answer to the "
         "question in a structured format as a JSON object."
     )
 
-    result_type = pydantic.create_model(TODO_PROVIDE_PYDANTIC_MODEL_ARGS_HERE)
+    result_type = pydantic.create_model(
+    "IrishNameClassificationResult",
+    is_irish_sounding=(
+        bool,
+        pydantic.Field(
+            ...,
+            description=(
+                "Set to true only if the person's full name sounds Irish based on naming conventions. "
+                "Set to false otherwise."
+            ),
+        ),
+    ),
+    reason=(
+        str,
+        pydantic.Field(
+            ...,
+            min_length=8,
+            max_length=240,
+            description=(
+                "A brief, factual justification for the classification, referencing name patterns "
+                "(given name and/or surname). One concise sentence."
+            ),
+        ),
+    ),
+    __config__={"extra": "forbid"},
+)
+
     retval = await ruc_submit_sample_request_to_llm(
         messages=convo,
         system_prompt=system_prompt,

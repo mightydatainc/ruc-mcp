@@ -153,10 +153,24 @@ async def ruc_submit_sample_request_to_llm(
             "LLM returned no text in response to the structured output prompt."
         )
 
+    if "```json" not in formal_structured_text:
+        # That's okay-ish. The LLM should have followed the instructions to start its reply 
+        # with a JSON code block, but maybe it forgot. Let's try to parse the whole thing as JSON
+        # and see if we get anything.
+        try:
+            return json.loads(formal_structured_text)
+        except json.JSONDecodeError:
+            raise ValueError(
+                "LLM did not include a JSON code block in its response to the structured output prompt, "
+                "and the text of the response could not be parsed as JSON either. Here's what it said: "
+                + formal_structured_text
+            )
+
     split_on_json = formal_structured_text.split("```json", 1)
     if len(split_on_json) < 2:
         raise ValueError(
             "LLM did not include a JSON code block in its response to the structured output prompt."
+            "Here's what it said instead: " + formal_structured_text
         )
 
     json_block_and_after = split_on_json[1]
@@ -173,7 +187,7 @@ async def ruc_submit_sample_request_to_llm(
 """
 
 STUB_FUNCTION_IMPLEMENTATION_TEMPLATE = """
-async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict:
+async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict | list | str | int | float | bool:
     system_prompt = "TODO PASTE SYSTEM PROMPT CONTENTS HERE"
 
     convo = [json.dumps(arg, indent=2)]
@@ -685,7 +699,7 @@ Also, it should start with `result_type = pydantic.create_model(`,
 so that I can just string-replace your code directly into my function.
 """)
 
-    logging.debug("Asking model to define result type for stub function %s.")
+    logging.debug(f"Asking model to define result type for stub function {stubname}.")
     resulttype_sample_result = await ctx.sample(
         messages=convo,
         system_prompt=RUC_FUNCTION_WRITING_SYSTEM_PROMPT,
