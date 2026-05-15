@@ -320,8 +320,11 @@ triple-backtick delimiter.
             # POC path: run generated code directly in-process.
             # Production hardening plan: execute this inside an ephemeral Docker container
             # with strict CPU/memory/time limits, then destroy the container immediately.
-            namespace: dict[str, Any] = {}
             error_stage = "exec"
+            namespace: dict[str, Any] = {
+                "__name__": "ruc_data_loader",
+                "__package__": None,
+            }
             exec(generated_code, namespace, namespace)
 
             error_stage = "function_lookup"
@@ -758,7 +761,10 @@ async def _execute_workflow_code(
     logger = logging.getLogger(__name__)
     logger.info("Executing workflow code.")
 
-    namespace: dict[str, Any] = {}
+    namespace: dict[str, Any] = {
+        "__name__": "ruc_generated_workflow",
+        "__package__": None,
+    }
     exec(pycode, namespace, namespace)
 
     execute_workflow = namespace.get("execute_workflow")
