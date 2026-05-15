@@ -108,6 +108,70 @@ writing code that works "for now". Treat the stub functions as though they actua
 work in the here and now.
 """
 
+INJECT_RUC_LLM_CALL_FUNCTION = """
+async def ruc_submit_sample_request_to_llm(
+    messages: list[str],
+    system_prompt: str,
+    ctx: fastmcp.Context,
+    result_type: type[pydantic.BaseModel],
+) -> dict | list | str | int | float | bool:
+    convo = json.loads(json.dumps(messages))  # Deep copy for immutability.
+
+    try:
+        formal_structured_sample_result = await ctx.sample(
+            messages=convo,
+            system_prompt=system_prompt,
+            max_tokens=5000,
+            result_type=result_type,
+        )
+        return formal_structured_sample_result.result.model_dump()
+    except Exception as e:
+        # Check if the error is a ValueError whose message starts with:
+        # "Client does not support sampling with tools."
+        # If it's not, then this is an unexpected error and we should raise it.
+        is_sampling_tool_error = isinstance(e, ValueError) and str(e).startswith(
+            "Client does not support sampling with tools."
+        )
+        if not is_sampling_tool_error:
+            raise e
+
+    # If we get here, then the error is a sampling tool error, which means that the client
+    # does not support sampling with tools. We can handle this case gracefully or provide
+    # a fallback mechanism.
+    convo.append(
+        'Begin your reply with a fenced code block labeled "```json". '
+        "Inside that block, provide a JSON object that matches the expected format."
+    )
+    formal_structured_sample_result = await ctx.sample(
+        messages=convo,
+        system_prompt=system_prompt,
+        max_tokens=5000,
+    )
+    formal_structured_text = formal_structured_sample_result.text
+    if not formal_structured_text:
+        raise ValueError(
+            "LLM returned no text in response to the structured output prompt."
+        )
+
+    split_on_json = formal_structured_text.split("```json", 1)
+    if len(split_on_json) < 2:
+        raise ValueError(
+            "LLM did not include a JSON code block in its response to the structured output prompt."
+        )
+
+    json_block_and_after = split_on_json[1]
+    split_on_closing = json_block_and_after.split("```", 1)
+    if len(split_on_closing) < 2:
+        raise ValueError(
+            "LLM did not include a properly closed JSON code block in its response to the structured output prompt."
+        )
+    json_block = split_on_closing[0]
+    try:
+        return json.loads(json_block)
+    except json.JSONDecodeError as e:
+        raise ValueError("LLM's JSON code block could not be parsed as JSON.") from e
+"""
+
 STUB_FUNCTION_IMPLEMENTATION_TEMPLATE = """
 async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict:
     system_prompt = "TODO PASTE SYSTEM PROMPT CONTENTS HERE"
@@ -138,13 +202,13 @@ async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict:
 
     result_type = pydantic.create_model(TODO_PROVIDE_PYDANTIC_MODEL_ARGS_HERE)
 
-    formal_structured_sample_result = await ctx.sample(
+    retval = await ruc_submit_sample_request_to_llm(
         messages=convo,
         system_prompt=system_prompt,
-        max_tokens=5000,
+        ctx=ctx,
         result_type=result_type,
     )
-    return formal_structured_sample_result.result.model_dump()
+    return retval
 """
 
 
@@ -466,6 +530,9 @@ and will copy-paste it into an execution environment.
                 )
 
             pycode = "import fastmcp\nimport json\nimport pydantic\n\n" + pycode
+
+            # Inject some helper functions.
+            pycode += "\n\n\n" + INJECT_RUC_LLM_CALL_FUNCTION
 
             return pycode
         except Exception as e:
