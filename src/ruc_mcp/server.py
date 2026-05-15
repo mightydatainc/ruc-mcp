@@ -906,6 +906,11 @@ async def ruc_execute_semantic_code_workflow(
 
     pycode = await _write_workflow(ctx, convo)
 
+    logger.info(
+        "Workflow written. Now checking for any stub functions that need implementations, "
+        "and replacing them with real code."
+    )
+
     pycode = await _replace_all_stubs_with_implementations(ctx, pycode, convo)
 
     # For now, just log the generated code and return a placeholder response, since the main point
