@@ -368,6 +368,13 @@ async def ruc_execute_semantic_code_workflow(
                 '"Interpret dates as eight-digit numerical sequences in DDMMYYYY format". '
                 "Not all tasks will require this field, so feel free to leave it blank if "
                 "there are no special requirements."
+                "\n\n"
+                "PRO TIP: Keep this *minimal*. The more behavioral requirements a task has, "
+                "the more complex the implementation will be, and the higher the risk that "
+                "something will go wrong. So provide only the most essential requirements "
+                "here, and try to keep the task description itself as clear and comprehensive "
+                "as possible, so that you don't have to rely on this field to convey "
+                "important information about the task."
             )
         ),
     ] = None,
@@ -429,11 +436,21 @@ async def ruc_execute_semantic_code_workflow(
         )
         for preview in data_previews:
             convo.append(preview)
+    else:
+        convo.append(
+            "No external data sources were provided, so you'll have to rely entirely on the task "
+            "description and context explanation to understand what this task is asking you to do. "
+            "If that's impossible, i.e. if the task is inherently asking you to operate on data "
+            "and that data is missing, then that's almost certainly an error on the part of "
+            "either the end user or the AI agent that dispatched you."
+        )
 
     pycode = await _write_workflow(ctx, convo)
 
-    # For now, just log the generated code and return a placeholder response, since the main point of this POC is to demonstrate the code generation aspect of RUC. The production version of this function will need to execute the
-    # generated code in a sandboxed environment and return the actual results of that execution.
+    # For now, just log the generated code and return a placeholder response, since the main point
+    # of this POC is to demonstrate the code generation aspect of RUC. The production version of
+    # this function will need to execute the generated code in a sandboxed environment and return
+    # the actual results of that execution.
     logger.info("Generated workflow code:\n%s", pycode)
 
     return {
