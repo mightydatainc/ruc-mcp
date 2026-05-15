@@ -162,19 +162,19 @@ def configure_logging() -> None:
     )
 
 
-def _extract_python_code_block(response_text: str) -> str:
-    """Extract the last python fenced code block from a model response."""
-    python_blocks = re.findall(
-        r"```python\s*(.*?)```", response_text, flags=re.IGNORECASE | re.DOTALL
+def _extract_labeled_code_block(response_text: str, label: str) -> str:
+    """Extract the last fenced code block matching the given label."""
+    if not label.strip():
+        raise ValueError("Code block label must be a non-empty string.")
+
+    pattern = rf"```{re.escape(label)}\s*(.*?)```"
+    labeled_blocks = re.findall(pattern, response_text, flags=re.IGNORECASE | re.DOTALL)
+    if labeled_blocks:
+        return labeled_blocks[-1].strip()
+
+    raise ValueError(
+        f"Sampling response did not include a fenced code block labeled '{label}'."
     )
-    if python_blocks:
-        return python_blocks[-1].strip()
-
-    generic_blocks = re.findall(r"```\s*(.*?)```", response_text, flags=re.DOTALL)
-    if generic_blocks:
-        return generic_blocks[-1].strip()
-
-    raise ValueError("Sampling response did not include an executable code block.")
 
 
 def _construct_data_source_previews(
@@ -312,7 +312,7 @@ triple-backtick delimiter.
             )
 
             error_stage = "extract"
-            generated_code = _extract_python_code_block(sample_result.text)
+            generated_code = _extract_labeled_code_block(sample_result.text, "python")
 
             # POC path: run generated code directly in-process.
             # Production hardening plan: execute this inside an ephemeral Docker container
@@ -435,7 +435,7 @@ and will copy-paste it into an execution environment.
                     "Sampling returned no text when trying to write the initial workflow code."
                 )
 
-            pycode = _extract_python_code_block(sample_result.text)
+            pycode = _extract_labeled_code_block(sample_result.text, "python")
             if not pycode:
                 raise ValueError(
                     "Failed to extract Python code block when trying to write "
@@ -623,7 +623,9 @@ so that I can just string-replace your code directly into my function.
             f"stub function {stubname}."
         )
 
-    resulttype_pysnippet = _extract_python_code_block(resulttype_sample_result.text)
+    resulttype_pysnippet = _extract_labeled_code_block(
+        resulttype_sample_result.text, "python"
+    )
     if not resulttype_pysnippet:
         raise ValueError(
             "Failed to extract a Python code block from the model's response when we asked it to "
@@ -640,8 +642,63 @@ so that I can just string-replace your code directly into my function.
         resulttype_pysnippet,
     )
 
-    # TODO: Left off coding here.
-    stubfunction = ""
+    # Next, let's do something about that system prompt.
+
+    # Restore the conversation to the state it was in before we presented the Python code,
+    # so that the model can see the code we just wrote. That way, it won't be distracted
+    # by potential ambiguities in the return type.
+    convo = json.loads(json.dumps(convoSnapshotBeforePresentingPythonCode))
+
+    convo.append(f"""
+```python
+{stubfunction}
+```
+""")
+
+    convo.append(f"""
+I need your help writing a system prompt.
+See where it says "TODO PASTE SYSTEM PROMPT CONTENTS HERE"?
+Yeah, well, I need such contents. :)
+
+Compose a focused, chain-of-thought optimized system prompt for this task.
+
+Don't dive right into writing the prompt just yet.
+First, talk about what would make a good prompt vs a bad prompt in this scenario.
+
+Then, when you're ready, emit the system prompt in a block of
+triple-backticks labeled "```systemprompt".
+""")
+
+    logging.debug(
+        "Asking model to provide system prompt for stub function %s.", stubname
+    )
+    sysprompt_sample_result = await ctx.sample(
+        messages=convo,
+        system_prompt=RUC_FUNCTION_WRITING_SYSTEM_PROMPT,
+        max_tokens=20_000,
+    )
+    if not sysprompt_sample_result.text:
+        raise ValueError(
+            "The model failed to provide any text when we asked it to provide a system prompt "
+            f"for stub function {stubname}."
+        )
+
+    sysprompt = _extract_labeled_code_block(
+        sysprompt_sample_result.text, "systemprompt"
+    )
+    if not sysprompt:
+        raise ValueError(
+            "Failed to extract a system prompt block from the model's response when we asked it "
+            f"to provide a system prompt for stub function {stubname}."
+        )
+    # The replacement is nontrivial, because the system prompt is a string that might contain
+    # delimiters that we ourselves are using in the stub function template. Our best bet
+    # is to give it a JSONized string and parse it in the function.
+    stubfunction = stubfunction.replace(
+        '"TODO PASTE SYSTEM PROMPT CONTENTS HERE"',
+        f"json.loads({json.dumps(sysprompt)})",
+    )
+
     return stubfunction
 
 
