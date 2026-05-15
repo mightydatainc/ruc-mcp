@@ -107,6 +107,43 @@ writing code that works "for now". Treat the stub functions as though they actua
 work in the here and now.
 """
 
+STUB_FUNCTION_IMPLEMENTATION_TEMPLATE = """
+async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict:
+    system_prompt = "TODO PASTE SYSTEM PROMPT CONTENTS HERE"
+
+    convo = [json.dumps(arg, indent=2)]
+
+    brainstorm_sample_result = await ctx.sample(
+        messages=convo,
+        system_prompt=system_prompt + (
+            "\n\n"            
+            "Brainstorm the question first, providing chain-of-thought reasoning to ensure "
+            "you provide a well-thought-out answer. At the end of your consideration and "
+            "reasoning, provide a final answer. Don't worry about formatting the final answer "
+            "in a particular way, just provide it in a clear and concise manner. We'll have "
+            "you formalize the output in the correct format in a later step."
+        ),
+        max_tokens=5000,
+    )
+    brainstorm_text = brainstorm_sample_result.text
+
+    convo.append("LLM's brainstorm and reasoning:\n" + brainstorm_text)
+    convo.append(
+        "Now, based on the above brainstorm and reasoning, provide a final answer to the "
+        "question in a structured format as a JSON object."
+    )
+
+    result_type = pydantic.create_model(TODO_PROVIDE_PYDANTIC_MODEL_ARGS_HERE)
+
+    formal_structured_sample_result = await ctx.sample(
+        messages=convo,
+        system_prompt=system_prompt,
+        max_tokens=5000,
+        result_type=result_type,
+    )
+    return formal_structured_sample_result.result.model_dump()
+"""
+
 
 def configure_logging() -> None:
     """Write runtime logs to a fresh file on each launch and echo to stderr."""
@@ -514,7 +551,7 @@ explanation of why not.
     )
 
 
-async def _replace_stub_with_implementation(
+async def _write_implementation_for_stub(
     ctx: fastmcp.Context,
     stubname: str,
     pycode: str,
@@ -533,12 +570,6 @@ has a major discontinuity. I apologize for the confusion.
 
 But that's okay, because I had copy-pasted the code you wrote.
 
-I was just in the process of filling in those stub functions. If you see any functions marked
-`<function_name>_obsolete_stub`, that's me -- that's my way of checking off the stubs I've
-completed as I go (marking for deletion later). (If you don't see any 
-`<function_name>_obsolete_stub` functions, then that's probably because I haven't gotten to
-any of them yet.)
-
 Check it out.
 
 ```python
@@ -546,22 +577,72 @@ Check it out.
 ```
 """)
 
-    # Now that we've shown the current state of the code back to the model,
-    # neuter the stub function by renaming it to {stubname}_obsolete_stub,
-    # so that its definition won't interfere with the next round of code generation
-    # for the real implementation.
-    pycode = pycode.replace(f"def {stubname}(", f"def {stubname}_obsolete_stub(")
+    stubfunction = f"{STUB_FUNCTION_IMPLEMENTATION_TEMPLATE}"
+    stubfunction = stubfunction.replace("TODO_PROVIDE_FUNCTION_NAME", stubname)
 
-    # foo = await ctx.sample(
-    #     messages=convo,
-    #     system_prompt=RUC_FUNCTION_WRITING_SYSTEM_PROMPT,
-    #     max_tokens=20_000,
-    #     result_type=
-    # )
-    # print(foo)
+    convo.append(f"""
+I'm currently working on implementing the function {stubname}. Maybe you can help me out.
+Here's what my implementation looks like so far...
+""")
+
+    # Save a snapshot of the convo in this state.
+    convoSnapshotBeforePresentingPythonCode = json.loads(json.dumps(convo))
+
+    convo.append(f"""
+```python
+{stubfunction}
+```
+""")
+
+    convo.append("""
+I need your help defining the result type.
+
+Take a good look at how the function is called in the code, and how its results are used.
+Based on your observations, the function's TODO notes, and so on, describe what its return
+structure is like.
+
+When you're done, write a Python block that I can use for declaring the result type.
+Bear in mind that your Pydantic model will be passed to an LLM as a structured output
+constraint, so be sure to include guidance (e.g. descriptions and commentary) and
+guardrails (e.g. min and max values) where appropriate.
+
+Your Python block should be enclosed in triple backticks labeled "```python".
+Also, it should start with `result_type = pydantic.create_model(`,
+so that I can just string-replace your code directly into my function.
+""")
+
+    logging.debug("Asking model to define result type for stub function %s.")
+    resulttype_sample_result = await ctx.sample(
+        messages=convo,
+        system_prompt=RUC_FUNCTION_WRITING_SYSTEM_PROMPT,
+        max_tokens=20_000,
+    )
+    if not resulttype_sample_result.text:
+        raise ValueError(
+            "The model failed to provide any text when we asked it to define the result type for "
+            f"stub function {stubname}."
+        )
+
+    resulttype_pysnippet = _extract_python_code_block(resulttype_sample_result.text)
+    if not resulttype_pysnippet:
+        raise ValueError(
+            "Failed to extract a Python code block from the model's response when we asked it to "
+            f"define the result type for stub function {stubname}."
+        )
+
+    # Now we have the code snippet for the result type declaration. Let's insert it into the
+    # stub function template.
+    # Make sure we get the initial indent level correct, because Python is sensitive about that.
+    # The rest of the indentation doesn't matter, only the first line's indentation.
+    resulttype_pysnippet = "    " + resulttype_pysnippet.strip()
+    stubfunction = stubfunction.replace(
+        "result_type = pydantic.create_model(TODO_PROVIDE_PYDANTIC_MODEL_ARGS_HERE)",
+        resulttype_pysnippet,
+    )
 
     # TODO: Left off coding here.
-    return pycode
+    stubfunction = ""
+    return stubfunction
 
 
 async def _replace_all_stubs_with_implementations(
@@ -575,24 +656,34 @@ async def _replace_all_stubs_with_implementations(
 
     logger.info("Looking for stub functions to implement in the generated code.")
 
-    # We marked these stub functions with a special syntax in the TODO comment, so we can grep for them.
-    # The syntax is "TODO(llm_stub: stub_function_name): description of what the function should do".
+    # We marked these stub functions with a special syntax in the TODO comment,
+    # so we can grep for them.
+    # The syntax is
+    # "TODO(llm_stub: stub_function_name): description of what the function should do".
     stub_pattern = re.compile(r"TODO\(llm_stub:\s*(\w+)\):\s*(.*?)\n")
     stubs = stub_pattern.findall(pycode)
     logger.info("Found %d stub functions to implement: %s", len(stubs), stubs)
 
-    for stubname, stubdescription in stubs:
-        pycode = await _replace_stub_with_implementation(ctx, stubname, pycode, convo)
+    stubfunctions_by_name: dict[str, str] = {}
 
-        # NOTE: This goes in _replace_stub_with_implementation
-        # After we get the implementation for this stub, we should replace the stub definition in pycode with the new implementation,
-        # so that the next time we ask for an implementation of another stub, the model can see the implementations we've done so far.
-        # For simplicity, we'll just mark the old stub definition as obsolete by renaming it to _obsolete_stubname.
-        # pycode = re.sub(
-        #     rf"def\s+{stubname}\s*\(",
-        #     f"def _obsolete_{stubname}(",
-        #     pycode,
-        # )
+    # NOTE: In theory this could be done in parallel, but to keep things simple and to
+    # avoid any weirdness with the model getting confused by multiple simultaneous requests,
+    # we'll do it sequentially for now.
+    for stubname, stubdescription in stubs:
+        stubfunction = await _write_implementation_for_stub(
+            ctx, stubname, pycode, convo
+        )
+        stubfunctions_by_name[stubname] = stubfunction
+
+    for stubname, stubfunction in stubfunctions_by_name.items():
+        # Now that we've shown the current state of the code back to the model,
+        # neuter the stub function by renaming it to {stubname}_obsolete_stub,
+        # so that its definition won't interfere with the next round of code generation
+        # for the real implementation.
+        pycode = pycode.replace(f"def {stubname}(", f"def {stubname}_obsolete_stub(")
+
+        # Add the now-implemented function to the code.
+        pycode += "\n\n\n" + stubfunction
 
     return pycode
 

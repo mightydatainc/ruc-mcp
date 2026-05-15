@@ -62,14 +62,15 @@ async def classify_irish_name_obsolete_stub(arg: dict, ctx: fastmcp.Context) -> 
 
 
 async def classify_irish_name(arg: dict, ctx: fastmcp.Context) -> dict:
-    system_prompt = "PASTE SYSTEM PROMPT CONTENTS HERE"
+    system_prompt = "TODO PASTE SYSTEM PROMPT CONTENTS HERE"
 
     convo = [json.dumps(arg, indent=2)]
 
     brainstorm_sample_result = await ctx.sample(
         messages=convo,
-        system_prompt=(
-            f"{system_prompt}\n\n"
+        system_prompt=system_prompt
+        + (
+            "\n\n"
             "Brainstorm the question first, providing chain-of-thought reasoning to ensure "
             "you provide a well-thought-out answer. At the end of your consideration and "
             "reasoning, provide a final answer. Don't worry about formatting the final answer "
@@ -86,18 +87,12 @@ async def classify_irish_name(arg: dict, ctx: fastmcp.Context) -> dict:
         "question in a structured format as a JSON object."
     )
 
+    result_type = pydantic.create_model(TODO_PROVIDE_PYDANTIC_MODEL_ARGS_HERE)
+
     formal_structured_sample_result = await ctx.sample(
         messages=convo,
         system_prompt=system_prompt,
         max_tokens=5000,
-        result_type=pydantic.create_model(
-            "FormalStructuredResult",
-            classification=(
-                typing.Literal["irish_sounding", "not_irish_sounding", "uncertain"],
-                ...,
-            ),
-            confidence=(float, pydantic.Field(ge=0.0, le=1.0)),
-            reason=(str, ...),
-        ),
+        result_type=result_type,
     )
     return formal_structured_sample_result.result.model_dump()
