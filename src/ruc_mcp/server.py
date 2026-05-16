@@ -48,7 +48,7 @@ In today's work session, you'll write a Python function called `execute_workflow
 It will adhere to the following calling convention and structure:
 
 ```python
-async def execute_workflow(data_source_records: dict[str, list[Any]], ctx: fastmcp.Context):
+async def execute_workflow(data_source_records: dict[str, list[Any]], ctx: fastmcp.Context, logger: logging.Logger) -> dict:
     # TODO: Implement the task here
     # ...
     return retval # "retval" is some JSON-serializable dict or list.
@@ -84,7 +84,12 @@ more suitable to an LLM than to a Python function.
 If you come across such operational requirements, then here's what I want you to do:
 Invent async ad-hoc functions on the fly that would hypothetically send an LLM call. Each such
 function should take a single JSON-serializable object as an argument (call it just "arg") and the
-FastMCP Context object ("ctx"), and will return some kind of simple structured output as a reply.
+FastMCP Context object ("ctx"), and will return a JSON serializable dict as a reply.
+Its function signature should look like this:
+```python
+async def some_made_up_function_name(arg: dict, ctx: fastmcp.Context) -> dict:
+```
+
 Whenever you invent such an ad-hoc function, write a placeholder stub for it, and describe in a
 TODO statement what you'd imagine that the function will do. Make the body of the function throw
 a NotImplementedError with a message saying what the function is and what it would do if it were
@@ -114,7 +119,7 @@ async def ruc_submit_sample_request_to_llm(
     system_prompt: str,
     ctx: fastmcp.Context,
     result_type: type[pydantic.BaseModel],
-) -> dict | list | str | int | float | bool:
+) -> dict:
     convo = json.loads(json.dumps(messages))  # Deep copy for immutability.
 
     try:
@@ -187,7 +192,7 @@ async def ruc_submit_sample_request_to_llm(
 """
 
 STUB_FUNCTION_IMPLEMENTATION_TEMPLATE = """
-async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict | list | str | int | float | bool:
+async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict:
     system_prompt = "TODO PASTE SYSTEM PROMPT CONTENTS HERE"
 
     convo = [json.dumps(arg, indent=2)]
@@ -543,7 +548,10 @@ and will copy-paste it into an execution environment.
                     "system prompt."
                 )
 
-            pycode = "import fastmcp\nimport json\nimport pydantic\n\n" + pycode
+            pycode = (
+                "import fastmcp\nimport logging\nimport json\nimport pydantic\n\n"
+                + pycode
+            )
 
             # Inject some helper functions.
             pycode += "\n\n\n" + INJECT_RUC_LLM_CALL_FUNCTION
@@ -856,7 +864,11 @@ async def _execute_workflow_code(
 
     # The function execute_workflow takes an argument called "data_source_records".
     # Pass it in.
-    workflow_result = execute_workflow(data_source_records=data_source_records, ctx=ctx)
+    workflow_result = execute_workflow(
+        data_source_records=data_source_records,
+        ctx=ctx,
+        logger=logger,
+    )
     result = (
         await cast(Any, workflow_result)
         if inspect.isawaitable(workflow_result)
