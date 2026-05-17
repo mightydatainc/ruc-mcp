@@ -293,10 +293,19 @@ def _construct_data_source_previews(
     return previews
 
 
-def _send_result_to_uri(uri: str, result: Any) -> str:
+def _send_result_to_uri(uri: str, file_contents: Any) -> str:
     """Write workflow results to a destination URI and return an execution note."""
     logger = logging.getLogger(__name__)
     logger.info("Sending workflow result to URI: %s", uri)
+
+    # If file_contents is a string, then we probably want to write that string directly.
+    # If it's anything else, we'll assume it's a JSON-serializable object and we'll write
+    # the JSON dump of it.
+    file_contents = (
+        file_contents
+        if isinstance(file_contents, str)
+        else json.dumps(file_contents, ensure_ascii=False)
+    )
 
     parsed_uri = urlparse(uri)
     if parsed_uri.scheme == "file":
@@ -313,13 +322,13 @@ def _send_result_to_uri(uri: str, result: Any) -> str:
         file_path = Path(url2pathname(unquote(file_uri_path)))
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, indent=2, ensure_ascii=False)
+            f.write(file_contents)
 
         logger.info("Workflow result written to %s", file_path)
         return f"Wrote workflow result to {uri}.\n\n"
 
     if parsed_uri.scheme in ("http", "https"):
-        payload = json.dumps(result, ensure_ascii=False).encode("utf-8")
+        payload = file_contents.encode("utf-8")
         request = Request(
             uri,
             data=payload,
@@ -1092,15 +1101,14 @@ async def ruc_execute_semantic_code_workflow(
 
     if result_uri and len(result_uri) > 0:
         convo.append(
-            "The end user (or an LLM agent calling you on the user's behalf) wants you to write "
-            "the results to a file or post them to an external URI. "
-            "The destination it wants is this: "
-            f"{result_uri}\n\n"
+            'MAKE THE WORKFLOW RESULT USE {"file_contents": "lorem ipsum dolor..."}\n\n '
+            "You've been asked to make the workflow write its results to a file or post them to "
+            "an external URI. "
             "On the surface, this might seem impossible, because you don't have access to the "
-            "filesystem nor the network. Fortunately, we "
-            "have a special methodology for this exact scenario. Structure your workflow so that "
-            'its results have a "file_contents" field, whose value will be a string containing '
-            "the full contents to write -- i.e. like this: \n\n"
+            "filesystem nor the network. Fortunately, our runtime environment has special support "
+            "for this exact scenario: the `file_contents` field! "
+            "Make `execute_workflow` return a dict with a `file_contents` field, whose value is "
+            "a string containing the full contents to write. Like this:\n\n"
             '{"file_contents": "the full contents string to write goes here"}\n\n'
             "Our runtime environment will look for this field in your workflow's output, "
             "and if it finds it, it will write the contents of that field to the given "
