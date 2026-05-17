@@ -379,3 +379,193 @@ O2 Sat%: 99%
 Notes: No surgical history. On oral contraceptives. Denies vaginal bleeding or discharge. Abdomen rigid with marked guarding on left lower quadrant. Pain with movement. Denies recent sexual intercourse. Bowel sounds present.
 
 ---
+
+Time: 10:33 AM
+
+Patient presents: 47-year-old male, alert, visibly uncomfortable
+
+Visible symptoms: Frequent coughing, hoarse voice, flushed face
+
+Reported symptoms: Persistent cough for 5 days, chest tightness when breathing deeply, sore throat, low appetite, reports symptoms worsened overnight; denies vomiting
+
+Vitals
+Temp (degF): 100.1
+BP: 130/82
+HR: 96
+RR: 20
+O2 Sat%: 95%
+
+Notes: Works as rideshare driver, reports poor sleep this week. No regular medications. Denies recent travel. Speaking in full sentences but pauses to cough.
+
+---
+
+Time: 11:10 AM
+
+Patient presents: 29-year-old female, alert, restless in chair
+
+Visible symptoms: Holding right wrist against chest, mild swelling at wrist
+
+Reported symptoms: Slipped on wet kitchen floor this morning and landed on right hand, immediate wrist pain (7/10), pain increases with movement, tingling in thumb and index finger
+
+Vitals
+Temp (degF): 98.4
+BP: 116/72
+HR: 84
+RR: 14
+O2 Sat%: 99%
+
+Notes: Right-hand dominant. No prior wrist injuries. No medications, no allergies reported. Able to move fingers with discomfort.
+
+---
+
+Time: 11:47 AM
+
+Patient presents: 65-year-old male, fatigued, accompanied by neighbor
+
+Visible symptoms: Dry lips, slow movements, sunken eyes
+
+Reported symptoms: Weakness and dizziness for 2 days, poor fluid intake, reduced urine output, feels lightheaded when standing; denies chest pain and denies fall
+
+Vitals
+Temp (degF): 99.0
+BP: 102/64
+HR: 104
+RR: 16
+O2 Sat%: 97%
+
+Notes: Lives alone. Takes hydrochlorothiazide and amlodipine. Neighbor states patient has not been eating normally this week.
+
+---
+
+Time: 12:24 PM
+
+Patient presents: 14-year-old female, anxious, accompanied by father
+
+Visible symptoms: Audible wheeze, prolonged exhalation, mild use of accessory muscles
+
+Reported symptoms: Shortness of breath began during school gym class 40 minutes ago, chest feels tight, dry cough, forgot inhaler at home
+
+Vitals
+Temp (degF): 98.3
+BP: 110/68
+HR: 112
+RR: 24
+O2 Sat%: 93%
+
+Notes: History of intermittent breathing flare-ups with exercise. No fever. Father reports similar episodes in spring pollen season.
+
+---
+
+Time: 1:01 PM
+
+Patient presents: 58-year-old female, alert, rubbing lower back
+
+Visible symptoms: Guarded posture, slow gait, discomfort when sitting
+
+Reported symptoms: Lower back pain for 3 days after moving furniture, pain radiates to left buttock, worse with bending, rates pain 8/10, denies bowel or bladder changes
+
+Vitals
+Temp (degF): 98.2
+BP: 136/84
+HR: 90
+RR: 16
+O2 Sat%: 99%
+
+Notes: Works as house cleaner. Uses over-the-counter pain reliever at home with limited relief. No recent direct impact or fall.
+
+---
+
+Time: 1:38 PM
+
+Patient presents: 3-year-old male, crying, brought by mother
+
+Visible symptoms: Warm skin, runny nose, watery eyes
+
+Reported symptoms: Fever since last night, reduced appetite, pulling at right ear, woke repeatedly overnight and difficult to console
+
+Vitals
+Temp (degF): 101.8
+BP: 92/58
+HR: 126
+RR: 24
+O2 Sat%: 98%
+
+Notes: Immunizations reported up to date. No vomiting or diarrhea. Mother reports fewer wet diapers today than usual.
+
+---
+
+Time: 2:15 PM
+
+Patient presents: 40-year-old male, alert, intermittently grimacing
+
+Visible symptoms: Left ankle swelling, bruising along outer ankle, limping
+
+Reported symptoms: Rolled left ankle stepping off curb 1 hour ago, heard a pop, pain 7/10, unable to bear full weight
+
+Vitals
+Temp (degF): 98.6
+BP: 122/78
+HR: 86
+RR: 14
+O2 Sat%: 99%
+
+Notes: No prior surgery on left leg. Denies head strike or other injury. Foot sensation present, toe movement intact.
+
+---
+
+Time: 2:52 PM
+
+Patient presents: 76-year-old female, drowsy but arousable, brought by son
+
+Visible symptoms: Slight confusion, dry mucous membranes, delayed responses
+
+Reported symptoms: Increasing confusion over 24 hours, burning with urination, urinary frequency, generalized weakness, poor appetite
+
+Vitals
+Temp (degF): 100.5
+BP: 118/70
+HR: 98
+RR: 18
+O2 Sat%: 96%
+
+Notes: Son reports baseline is normally independent and oriented. Lives alone in apartment nearby. Takes metoprolol and simvastatin.
+
+---
+
+Time: 3:29 PM
+
+Patient presents: 22-year-old female, alert, tearful
+
+Visible symptoms: Rapid breathing, trembling hands, pacing behavior
+
+Reported symptoms: Sudden episode of chest tightness, tingling around mouth and fingers, sensation of not getting enough air, began during final exam
+
+Vitals
+Temp (degF): 98.1
+BP: 126/80
+HR: 118
+RR: 28
+O2 Sat%: 99%
+
+Notes: University student. No known medical history. Denies substance use today. Speech coherent but pressured.
+
+---
+
+Time: 4:06 PM
+
+Patient presents: 69-year-old male, alert, frustrated by discomfort
+
+Visible symptoms: Distended lower abdomen, frequent shifting in seat
+
+Reported symptoms: Inability to urinate since early morning, lower abdominal pressure and pain 8/10, increasing urgency without output
+
+Vitals
+Temp (degF): 99.1
+BP: 146/88
+HR: 102
+RR: 18
+O2 Sat%: 98%
+
+Notes: History of enlarged prostate reported by patient. Takes tamsulosin and lisinopril. No flank pain reported. Denies recent trauma.
+
+---

@@ -60,7 +60,7 @@ You can import default packages like `json` or `csv`, but you don't have access 
 advanced tools like dataframes. Likewise, the __future__ library in your environment
 is extremely flakey and unreliable, and must be avoided (not that you should need it anyway).
 Also, it'll be running in a restricted VM, so you can't access the network or the filesystem
--- again, not that you should need such things for a data restructuring operation. 
+-- again, not that you should need such things for a data restructuring operation.
 
 The one exception is that this environment *does* have a library called FastMCP installed,
 so you can `import fastmcp` and declare `ctx: fastmcp.Context` in your type signature.
@@ -1084,10 +1084,27 @@ async def ruc_execute_semantic_code_workflow(
     else:
         convo.append(
             "No external data sources were provided, so you'll have to rely entirely on the task "
-            "description and context explanation to understand what this task is asking you to do. "
-            "If that's impossible, i.e. if the task is inherently asking you to operate on data "
-            "and that data is missing, then that's almost certainly an error on the part of "
-            "either the end user or the AI agent that dispatched you."
+            "description and context explanation to understand what this task is asking you "
+            "to do. If that's impossible, i.e. if the task is inherently asking you to operate "
+            "on some data and that data is missing, then that's almost certainly an error on the "
+            "part of either the end user or the AI agent that dispatched you."
+        )
+
+    if result_uri and len(result_uri) > 0:
+        convo.append(
+            "The end user (or an LLM agent calling you on the user's behalf) wants you to write "
+            "the results to a file or post them to an external URI. "
+            "The destination it wants is this: "
+            f"{result_uri}\n\n"
+            "On the surface, this might seem impossible, because you don't have access to the "
+            "filesystem nor the network. Fortunately, we "
+            "have a special methodology for this exact scenario. Structure your workflow so that "
+            'its results have a "file_contents" field, whose value will be a string containing '
+            "the full contents to write -- i.e. like this: \n\n"
+            '{"file_contents": "the full contents string to write goes here"}\n\n'
+            "Our runtime environment will look for this field in your workflow's output, "
+            "and if it finds it, it will write the contents of that field to the given "
+            "destination."
         )
 
     try:
@@ -1144,7 +1161,16 @@ async def ruc_execute_semantic_code_workflow(
 
     # If we have a result_uri, write the result there instead of returning it directly.
     if result_uri and len(result_uri) > 0:
-        execution_notes += _send_result_to_uri(result_uri, runresult)
+        file_contents = (
+            (
+                runresult.get("file_contents")
+                if isinstance(runresult, dict)
+                else json.dumps(runresult, indent=2)
+            )
+            if runresult is not None
+            else ""
+        )
+        execution_notes += _send_result_to_uri(result_uri, file_contents)
 
     retval = {
         "status": "success",
@@ -1153,7 +1179,7 @@ async def ruc_execute_semantic_code_workflow(
     }
     if not result_uri:
         # If we didn't write the result to a URI, include it in the response.
-        retval["result"] = runresult
+        retval["result"] = json.dumps(runresult, indent=2)
 
     return retval
 
