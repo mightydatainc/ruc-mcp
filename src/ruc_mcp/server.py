@@ -565,6 +565,11 @@ async def _write_workflow(ctx: fastmcp.Context, convo: list[str]):
     """Write a Python function that performs a procedural workflow that includes
     "fuzzy" operations."""
     await ctx.info("Writing workflow code...")
+    await ctx.report_progress(
+        progress=0,
+        total=None,
+        message="Writing workflow code",
+    )
 
     convo = json.loads(json.dumps(convo))  # Deep-copy to ensure mutability.
 
@@ -644,6 +649,11 @@ async def _is_ready_for_workflow(ctx: fastmcp.Context, convo: list[str]):
     """Sanity-checks to see if we have enough information to proceed with writing a workflow."""
     await ctx.info(
         "Confirming that we have adequate information to proceed with writing workflow..."
+    )
+    await ctx.report_progress(
+        progress=0,
+        total=None,
+        message="Sanity-checking task requirements",
     )
 
     convo = json.loads(json.dumps(convo))  # Deep-copy to ensure mutability.
@@ -921,7 +931,11 @@ async def _execute_workflow_code(
 ) -> Any:
     """Execute the given workflow code and return the result."""
     logger = logging.getLogger(__name__)
-    await ctx.info("Executing workflow.")
+    await ctx.report_progress(
+        progress=0,
+        total=None,
+        message="Executing workflow.",
+    )
 
     namespace: dict[str, Any] = {
         "__name__": "ruc_generated_workflow",
@@ -1051,6 +1065,22 @@ async def ruc_execute_semantic_code_workflow(
     data_source_records = {}
     execution_notes = ""
     data_source_uris = data_source_uris or []
+
+    progress_message_loading_data_sources = (
+        f"Loading {len(data_source_uris)} data sources"
+        if len(data_source_uris) > 1
+        else (
+            "Loading data source"
+            if len(data_source_uris) == 1
+            else "No data sources to load"
+        )
+    )
+    await ctx.report_progress(
+        progress=0,
+        total=None,
+        message=progress_message_loading_data_sources,
+    )
+
     for data_source_uri in data_source_uris:
         try:
             data_source_records[data_source_uri] = await _load_data_from_uri(
