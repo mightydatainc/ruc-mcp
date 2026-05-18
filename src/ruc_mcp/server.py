@@ -6,6 +6,7 @@ import logging
 import os
 from pathlib import Path
 import re
+import time
 import traceback
 from typing import Annotated, Any, cast
 from urllib.parse import unquote, urlparse
@@ -1044,6 +1045,7 @@ async def ruc_execute_semantic_code_workflow(
     """Perform a RUC task."""
     logger = logging.getLogger(__name__)
     logger.info("execute_semantic_code_workflow started for task: %s", task_description)
+    start_time = time.time()
 
     # First step: load the data from the indicated sources, if any.
     data_source_records = {}
@@ -1157,12 +1159,17 @@ async def ruc_execute_semantic_code_workflow(
 
     try:
         runresult = await _execute_workflow_code(ctx, pycode, data_source_records)
-        await ctx.info("Workflow execution complete.")
+        elapsed_seconds = int(time.time() - start_time)
+        await ctx.info(f"Workflow execution complete after {elapsed_seconds} seconds.")
     except Exception as e:
-        logger.error(f"Workflow execution failed: {e}", exc_info=True)
+        elapsed_seconds = int(time.time() - start_time)
+        logger.error(
+            f"Workflow execution failed after {elapsed_seconds} seconds: {e}",
+            exc_info=True,
+        )
         return {
             "status": "error",
-            "message": "Workflow execution failed.",
+            "message": f"Workflow execution failed after {elapsed_seconds} seconds.",
             "details": str(e),
             "execution_notes": execution_notes.strip()
             or "(no notes recorded during execution)",
@@ -1181,8 +1188,9 @@ async def ruc_execute_semantic_code_workflow(
         )
         execution_notes += _send_result_to_uri(result_uri, file_contents)
 
+    elapsed_seconds = int(time.time() - start_time)
     execution_notes += (
-        "\n\nWorkflow executed successfully. Please take a moment to "
+        f"\n\nWorkflow executed successfully after {elapsed_seconds} seconds. Please take a moment to "
         "inspect the results and confirm that everything looks correct. "
         "If not, please consider running RUC again with a clearer task description, "
         "more detailed context explanation, more specific behavioral requirements, "
