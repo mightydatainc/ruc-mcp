@@ -120,9 +120,9 @@ progress through the current stage. The FastMCP Context object, `ctx`, has stand
 methods to facilitate this: ctx.debug, ctx.info, ctx.warning, and ctx.error -- these work just
 like the standard Python logger methods, except that they're asynchronous (so, call them 
 with `await`, e.g. `await ctx.info("Hello world")`). In addition, the `ctx` object also has an
-async method called `ctx.report_progress(progress: float, total: float)`, which shows
-the user a very convenient progress bar. Use these tools often to keep the user informed
-about what's going on!
+async method called `ctx.report_progress(progress: float, total: float, message: str)`, which
+shows the user a very convenient progress bar along with a short status message. Use these
+tools often to keep the user informed about what's going on!
 """
 
 INJECT_RUC_LLM_CALL_FUNCTION = """
@@ -1180,6 +1180,14 @@ async def ruc_execute_semantic_code_workflow(
             else ""
         )
         execution_notes += _send_result_to_uri(result_uri, file_contents)
+
+    execution_notes += (
+        "\n\nWorkflow executed successfully. Please take a moment to "
+        "inspect the results and confirm that everything looks correct. "
+        "If not, please consider running RUC again with a clearer task description, "
+        "more detailed context explanation, more specific behavioral requirements, "
+        "or a more detailed expected result schema, as you see fit."
+    )
 
     retval = {
         "status": "success",
