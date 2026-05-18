@@ -1,4 +1,8 @@
-"""Render Unto Caesar MCP server built with FastMCP."""
+"""RUC FastMCP server for mixed semantic and procedural workflows.
+
+This module defines the MCP tool that turns fuzzy task descriptions into
+deterministic Python workflows with explicit semantic LLM call boundaries.
+"""
 
 import json
 import inspect
@@ -1063,7 +1067,16 @@ async def ruc_execute_semantic_code_workflow(
         ),
     ] = None,
 ) -> dict[str, Any]:
-    """Perform a RUC task."""
+    """Execute a mixed semantic/procedural RUC workflow.
+
+    This tool ingests optional data sources, asks the model to generate workflow
+    code, replaces semantic stubs with structured LLM-call implementations, and
+    runs the resulting workflow against loaded records.
+
+    Returns a status payload containing execution notes and either:
+    - `result` as JSON text when no `result_uri` is provided, or
+    - write/post confirmation notes when `result_uri` is provided.
+    """
     logger = logging.getLogger(__name__)
     logger.info("execute_semantic_code_workflow started for task: %s", task_description)
     start_time = time.time()

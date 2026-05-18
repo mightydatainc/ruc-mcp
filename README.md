@@ -12,7 +12,7 @@ The result is a system that can do LLM-shaped work with the control, structure, 
 
 `ruc-mcp` is currently in the concept/prototype stage.
 
-The intended direction is still an MCP server that helps LLM agents separate semantic judgment from reliable procedural workflows, but the repository intentionally exposes only a minimal scaffold until that design is ready.
+The repository now includes an end-to-end prototype flow in which RUC generates workflow code, fills semantic stubs, and executes the workflow. The current execution path is still an in-process proof of concept and is not yet production-hardened.
 
 ## Core idea
 
@@ -34,12 +34,15 @@ RUC exists to let the LLM serve as the interface and semantic engine, while givi
 
 ## Status
 
-This repository currently contains a bare-bones scaffold only. It is intentionally limited to a minimal FastMCP server surface while the product shape is still being worked out.
+This repository contains a working prototype, not just a scaffold. It demonstrates dynamic workflow generation, LLM-assisted semantic steps, and execution orchestration through FastMCP.
+
+Hardening work is still pending. In particular, generated code execution should move from the current in-process path to an isolated Docker-based sandbox with strict resource and timeout controls.
 
 ## Scaffold layout
 
-- `src/ruc_mcp/server.py`: minimal FastMCP server scaffold with a `hello_world` example tool and the `execute_semantic_code_workflow` stub.
-- `tests/test_server.py`: tests that verify the intentionally small public surface.
+- `src/ruc_mcp/server.py`: FastMCP server implementation for `ruc_execute_semantic_code_workflow`, including data loading, workflow generation, stub expansion, and execution orchestration.
+- `logs/temp_auto_generated_workflow.py`: debug artifact written at runtime with generated workflow code.
+- `tests/test_server.py`: tests covering server behavior in the current prototype scope.
 
 ## Run tests
 
