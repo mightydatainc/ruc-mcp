@@ -1,6 +1,7 @@
-"""RUC FastMCP server for mixed semantic and procedural workflows.
+"""
+"Render Unto Caesar" FastMCP server for mixed semantic and procedural workflows.
 
-This module defines the MCP tool that turns fuzzy task descriptions into
+This module defines an MCP tool that turns fuzzy task descriptions into
 deterministic Python workflows with explicit semantic LLM call boundaries.
 """
 
@@ -328,6 +329,8 @@ def _send_result_to_uri(uri: str, file_contents: Any) -> str:
 
     parsed_uri = urlparse(uri)
     if parsed_uri.scheme == "file":
+        # TODO: Revise the output file access strategy when MCP launch moves into Docker.
+        # The current implementation assumes the server process can write host file URIs directly.
         # Canonical Windows URI: file:///C:/path/to/output.json
         # Also preserves compatibility with file://C:/path style during transition.
         if parsed_uri.netloc and parsed_uri.netloc != "localhost":
@@ -388,6 +391,8 @@ async def _load_data_from_uri(ctx: fastmcp.Context, uri: str) -> list[dict[str, 
     data_str = ""
 
     try:
+        # TODO: Revise the input file access strategy when MCP launch moves into Docker.
+        # The current implementation assumes the server process can read host file URIs directly.
         # Canonical Windows URI: file:///C:/path/to/file.csv
         # Also preserves compatibility with file://C:/path style during transition.
         if parsed_uri.netloc and parsed_uri.netloc != "localhost":

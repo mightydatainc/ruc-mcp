@@ -49,3 +49,17 @@ Hardening work is still pending. In particular, generated code execution should 
 ```bash
 python -m unittest discover -s tests -p "test*.py"
 ```
+
+## Docker image
+
+This repository now carries the Docker build recipe for the MCP server. The intended workflow is to build the image locally or in CI, then have VS Code launch the prebuilt image. Do not check a built image into the repository.
+
+Build the image with:
+
+```bash
+docker build -t mightydatainc/ruc-mcp:local .
+```
+
+The workspace MCP configuration in `.vscode/mcp.json` expects that local tag and starts the server with `docker run --rm -i mightydatainc/ruc-mcp:local`.
+
+This keeps MCP startup fast and predictable because VS Code only launches the container; it does not rebuild the image each time the server starts.

@@ -1,2 +1,0 @@
-# Runtime dependencies mirrored from pyproject.toml
-fastmcp>=3.3.0

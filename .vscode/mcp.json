@@ -2,13 +2,16 @@
   "servers": {
     "Render Unto Caesar": {
       "type": "stdio",
-      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "command": "docker",
       "cwd": "${workspaceFolder}",
-      "args": ["-m", "ruc_mcp"],
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}\\src",
-        "RUC_MCP_LOG_LEVEL": "DEBUG"
-      }
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "RUC_MCP_LOG_LEVEL=DEBUG",
+        "mightydatainc/ruc-mcp:local"
+      ]
     }
   }
 }
