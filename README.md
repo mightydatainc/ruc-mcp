@@ -57,8 +57,10 @@ This repository now carries the Docker build recipe for the MCP server. The inte
 Build the image with:
 
 ```bash
-docker build -t mightydatainc/ruc-mcp:local .
+docker build -t mightydatainc/ruc-mcp:local . --no-cache
 ```
+
+(The --no-cache flag is optional. When specified, Docker will rebuild the image from scratch. If omitted, Docker will build atop an existing image if one is present.)
 
 The workspace MCP configuration in `.vscode/mcp.json` expects that local tag and starts the server with `docker run --rm -i mightydatainc/ruc-mcp:local`.
 
