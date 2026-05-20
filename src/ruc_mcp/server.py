@@ -69,28 +69,41 @@ async def execute_workflow(data_source_records: dict[str, list[Any]], ctx: fastm
     return retval # "retval" is some JSON-serializable dict or list.
 ```
 
-The Python environment you'll be running in is a default Python 3.11 install.
-You can import default packages like `json` or `csv`, but you don't have access to fancy
-advanced tools like dataframes. Likewise, the __future__ library in your environment
-is extremely flakey and unreliable, and must be avoided (not that you should need it anyway).
-Also, it'll be running in a restricted VM, so you can't access the network or the filesystem
--- again, not that you should need such things for a workflow of this kind.
+---
 
-The one exception is that this environment *does* have a library called FastMCP installed,
-so you can `import fastmcp` and declare `ctx: fastmcp.Context` in your type signature.
-You shouldn't need to actually *use* the FastMCP library (we'll add calls to the LLM 
-ourselves in a later pass), but the Context object will be passed into your function,
-so I figure you'll want it for type signature purposes.
+Your Execution Environment: python-3.11:slim Docker image with /workspace
 
-The "ctx" argument is a FastMCP Context object. It's what we'll be using to communicate
+The environment you'll be running in is a default python-3.11:slim Docker image, with standard 
+libraries such as `json`, `re`, `pydantic`, and so on. It also has `fastmcp` installed, which
+provides the `Context` class for communicating with the LLM (more on that below). The Docker
+container is sandboxed against network and filesystem access; but you have read/write access to
+the folder /workspace, which you may use for reading source data and/or writing output files
+as requested by the task. You can also write to /tmp for "scratchpad" work, of course.
+
+(NOTE: the __future__ library in your environment is extremely flakey and unreliable, and
+must be avoided (not that you should need it anyway)).
+
+---
+
+FastMCP library: fastmcp.Context imported for type safety, but you shouldn't need to use it.
+
+This environment has a library called FastMCP installed, so you can `import fastmcp` and
+declare `ctx: fastmcp.Context` in your type signatures. You shouldn't need to actually
+*use* the FastMCP library (we'll add calls to the LLM  ourselves in a later pass), but the
+Context object will be passed into your function, so I figure you'll want it for type signature
+purposes. The "ctx" argument is a FastMCP Context object. It's what we'll be using to communicate
 with the LLM. Don't worry about it for now. We only provide it here because we'll need to
 pass it through to the LLM calling function stubs. More on that later.
 
-You may, of course, write whatever support or helper functions you might need.
+---
+
+How to use stub functions as placeholder LLM calls in `execute_workflow`
 
 In an ideal world, you should be able to implement the entire task using only conventional
 code, possibly with the help of heuristic tricks involving regexes or string operations
-where necessary.
+where necessary. Naturally, you may write whatever helper functions or support functions
+you want, and to structure your code however you like. For some tasks, conventional procedural
+code may entirely suffice to get the job done.
 
 However, in practice, some portion (or multiple portions) of this task might require judgment
 calls, inference, reconciliation of noisy or ambiguous information, and other tasks that are
@@ -116,11 +129,16 @@ To make it easier to find these stub functions later, use a special syntax for t
 with the special label "llm_stub", followed by the name of the function, and then a description of
 what the function would ask the LLM to do -- using the formatting exactly as shown.
 
-Put all such stub functions at the end of your code. They, as well as the main workflow function
-`execute_workflow`, must be at the top level of the module, i.e. not nested inside any other
-function or class. I should be able to copy-paste your entire code into a Python environment and
-run `execute_workflow(...)` without having to look for it inside a namespace or a class or 
-something.
+Put all such stub functions at the end of your code. 
+
+The stub functions, as well as the main workflow function `execute_workflow`, must be at the top
+level of the module, i.e. not nested inside any other function or class. I should be able to
+copy-paste your entire code into a Python environment and run `execute_workflow(...)` without 
+having to look for it inside a namespace or a class or something.
+
+---
+
+Tips and Guidelines
 
 PRO TIP: Don't write stubs for functions that you don't plan to call. We *will* fill out their
 implementations shortly, so don't bypass or avoid these stub functions simply in the interest of
@@ -138,6 +156,9 @@ async method called `ctx.report_progress(progress: float, total: float, message:
 shows the user a very convenient progress bar along with a short status message. Use these
 tools often to keep the user informed about what's going on!
 """
+# TODO: Instruct the LLM to write resumable code -- i.e. tell it to think about how it would
+# handle interruptions and restarts, and to write code that can pick up where it left off if
+# interrupted.
 
 INJECT_RUC_LLM_CALL_FUNCTION = """
 async def ruc_submit_sample_request_to_llm(
@@ -441,10 +462,9 @@ analyze it as an LLM, for that matter.
 Instead, I want you to write a Python function called `restructure_data`. This function takes
 a string (the full contents of the user's data file), and returns a list of dicts. 
 
-The Python environment you'll be running in is a default Python 3.11 install. You can import
+The Python environment you'll be running in is a Docker python:3.11-slim container. You can import
 default packages like `json` or `csv`, but you don't have access to fancy advanced tools like
-dataframes. Also, it's running in a restricted environment, so you can't access the network or
-the filesystem (not that you should need such things for a data restructuring operation).
+dataframes. You have access to the filesystem via the mount point /workspace.
 
 You should talk through your planned implementation first, to organize your plan and to
 strategize for the best approach to this problem.
@@ -1060,25 +1080,6 @@ async def ruc_execute_semantic_code_workflow(
             )
         ),
     ] = None,
-    result_uri: Annotated[
-        str | None,
-        Field(
-            description=(
-                "Optional destination to which to write bulk results. For most tasks, writing your "
-                "output to a file will be more practical than returning a huge JSON blob. "
-                "If this field isn't provided, RUC will just present the results directly to the "
-                "agent LLM that called it. This is a bad idea for large results, because the "
-                "LLM then has to load the entire result into its context window just to read it, "
-                "which is inefficient, unreliable, and probably defeats the purpose of using RUC "
-                "in the first place. So if your task is producing a large result, it's best to "
-                "provide a URI here to write it to. "
-                "If the URI is a file URI, RUC will write the result to the given file. "
-                "If the URI is an HTTP endpoint, RUC will POST the result to that endpoint as JSON. "
-                "Currently only accepts file URIs with absolute paths, "
-                "e.g. `file:///C:/Users/mvol/Documents/client_list.csv`"
-            )
-        ),
-    ] = None,
 ) -> dict[str, Any]:
     """Execute a mixed semantic/procedural RUC workflow.
 
@@ -1086,9 +1087,7 @@ async def ruc_execute_semantic_code_workflow(
     code, replaces semantic stubs with structured LLM-call implementations, and
     runs the resulting workflow against loaded records.
 
-    Returns a status payload containing execution notes and either:
-    - `result` as JSON text when no `result_uri` is provided, or
-    - write/post confirmation notes when `result_uri` is provided.
+    Returns a status payload containing execution notes and a `result` field.
     """
     logger = logging.getLogger(__name__)
     logger.info("execute_semantic_code_workflow started for task: %s", task_description)
@@ -1171,22 +1170,6 @@ async def ruc_execute_semantic_code_workflow(
             "part of either the end user or the AI agent that dispatched you."
         )
 
-    if result_uri and len(result_uri) > 0:
-        convo.append(
-            'MAKE THE WORKFLOW RESULT USE {"file_contents": "lorem ipsum dolor..."}\n\n '
-            "You've been asked to make the workflow write its results to a file or post them to "
-            "an external URI. "
-            "On the surface, this might seem impossible, because you don't have access to the "
-            "filesystem nor the network. Fortunately, our runtime environment has special support "
-            "for this exact scenario: the `file_contents` field! "
-            "Make `execute_workflow` return a dict with a `file_contents` field, whose value is "
-            "a string containing the full contents to write. Like this:\n\n"
-            '{"file_contents": "the full contents string to write goes here"}\n\n'
-            "Our runtime environment will look for this field in your workflow's output, "
-            "and if it finds it, it will write the contents of that field to the given "
-            "destination."
-        )
-
     try:
         await _is_ready_for_workflow(ctx, convo)
     except Exception as e:
@@ -1238,23 +1221,11 @@ async def ruc_execute_semantic_code_workflow(
             or "(no notes recorded during execution)",
         }
 
-    # If we have a result_uri, write the result there instead of returning it directly.
-    if result_uri and len(result_uri) > 0:
-        file_contents = (
-            (
-                runresult.get("file_contents")
-                if isinstance(runresult, dict)
-                else json.dumps(runresult, indent=2)
-            )
-            if runresult is not None
-            else ""
-        )
-        execution_notes += _send_result_to_uri(result_uri, file_contents)
-
     elapsed_seconds = int(time.time() - start_time)
     execution_notes += (
-        f"\n\nWorkflow executed successfully after {elapsed_seconds} seconds. Please take a moment to "
-        "inspect the results and confirm that everything looks correct. "
+        f"\n\nWorkflow executed successfully after {elapsed_seconds} seconds."
+        "\n\nPlease take a moment to "
+        "inspect the results and confirm that they look like what you were asking for. "
         "If not, please consider running RUC again with a clearer task description, "
         "more detailed context explanation, more specific behavioral requirements, "
         "or a more detailed expected result schema, as you see fit."
@@ -1265,9 +1236,6 @@ async def ruc_execute_semantic_code_workflow(
         "execution_notes": execution_notes.strip()
         or "(no notes recorded during execution)",
     }
-    if not result_uri:
-        # If we didn't write the result to a URI, include it in the response.
-        retval["result"] = json.dumps(runresult, indent=2)
 
     return retval
 
