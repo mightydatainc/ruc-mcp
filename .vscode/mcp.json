@@ -10,6 +10,8 @@
         "-i",
         "-e",
         "RUC_MCP_LOG_LEVEL=DEBUG",
+        "-v",
+        "${workspaceFolder}:/workspace",
         "mightydatainc/ruc-mcp:local"
       ]
     }
