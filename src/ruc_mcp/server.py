@@ -1180,7 +1180,7 @@ async def ruc_execute_semantic_code_workflow(
 
     # DEBUG: Save pycode to a local file, so we can inspect it if anything goes wrong during execution.
     with open(
-        "/workflow/logs/temp_auto_generated_workflow.py", "w", encoding="utf-8"
+        "/workspace/logs/temp_auto_generated_workflow.py", "w", encoding="utf-8"
     ) as f:
         f.write(pycode)
 
