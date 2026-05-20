@@ -343,66 +343,6 @@ def _construct_data_source_previews(
     return previews
 
 
-def _send_result_to_uri(uri: str, file_contents: Any) -> str:
-    """Write workflow results to a destination URI and return an execution note."""
-    logger = logging.getLogger(__name__)
-    logger.info("Sending workflow result to URI: %s", uri)
-
-    # If file_contents is a string, then we probably want to write that string directly.
-    # If it's anything else, we'll assume it's a JSON-serializable object and we'll write
-    # the JSON dump of it.
-    file_contents = (
-        file_contents
-        if isinstance(file_contents, str)
-        else json.dumps(file_contents, ensure_ascii=False)
-    )
-
-    parsed_uri = urlparse(uri)
-    if parsed_uri.scheme == "file":
-        # TODO: Revise the output file access strategy when MCP launch moves into Docker.
-        # The current implementation assumes the server process can write host file URIs directly.
-        # Canonical Windows URI: file:///C:/path/to/output.json
-        # Also preserves compatibility with file://C:/path style during transition.
-        if parsed_uri.netloc and parsed_uri.netloc != "localhost":
-            if len(parsed_uri.netloc) == 2 and parsed_uri.netloc[1] == ":":
-                file_uri_path = f"/{parsed_uri.netloc}{parsed_uri.path}"
-            else:
-                file_uri_path = f"//{parsed_uri.netloc}{parsed_uri.path}"
-        else:
-            file_uri_path = parsed_uri.path
-
-        file_path = Path(url2pathname(unquote(file_uri_path)))
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(file_contents)
-
-        logger.info("Workflow result written to %s", file_path)
-        return f"Wrote workflow result to {uri}.\n\n"
-
-    if parsed_uri.scheme in ("http", "https"):
-        payload = file_contents.encode("utf-8")
-        request = Request(
-            uri,
-            data=payload,
-            headers={"Content-Type": "application/json; charset=utf-8"},
-            method="POST",
-        )
-        with urlopen(request, timeout=30) as response:
-            status_code = response.status
-
-        if 200 <= status_code < 300:
-            logger.info("Workflow result posted to %s with status %s", uri, status_code)
-            return f"Posted workflow result to {uri} (HTTP {status_code}).\n\n"
-
-        raise ValueError(
-            f"Failed to post workflow result to {uri}: HTTP status {status_code}."
-        )
-
-    raise ValueError(
-        f"Unsupported URI scheme in {uri}. Supported schemes are file, http, and https."
-    )
-
-
 async def _load_data_from_uri(ctx: fastmcp.Context, uri: str) -> list[dict[str, Any]]:
     """Load data from a given URI and return it as a list of records."""
     logger = logging.getLogger(__name__)
@@ -606,7 +546,7 @@ triple-backtick delimiter.
     )
 
 
-async def _write_workflow(ctx: fastmcp.Context, convo: list[str]):
+async def _write_workflow(ctx: fastmcp.Context, convo: list[str]) -> dict[str, str]:
     """Write a Python function that performs a procedural workflow that includes
     "fuzzy" operations."""
     await ctx.info("Writing workflow code...")
@@ -645,6 +585,37 @@ and will copy-paste it into an execution environment.
                     "Sampling returned no text when trying to write the initial workflow code."
                 )
 
+            convo.append("ASSISTANT REPLY:\n\n" + sample_result.text)
+
+            convo.append(
+                "Please emit a very short summary, between one sentence and one paragraph, "
+                "in which you explain your implementation approach and the structure of "
+                "your code. I will attach this explanation to the results, so that when I "
+                "present the results I can also explain the methodology by which these "
+                "results were produced."
+                "\n\n"
+                "Your summary should be detailed but non-technical. Its target reader "
+                "should be a PM or a business client. You should explain your approach "
+                "in such a way that *they* understand what your code does."
+                "\n\n"
+                "Your explanation MUST make it very clear what's being handled procedurally "
+                "in Python code, what's being handled semantically in LLM calls, and how the "
+                "two parts interact with each other."
+            )
+            strategy_explanation_result = await ctx.sample(
+                messages=convo,
+                system_prompt=RUC_FUNCTION_WRITING_SYSTEM_PROMPT,
+                max_tokens=60_000,
+            )
+            if not strategy_explanation_result.text:
+                raise ValueError(
+                    "Sampling returned no text when trying to write the "
+                    "workflow strategy explanation."
+                )
+            strategy_explanation = strategy_explanation_result.text.strip()
+            await ctx.info(f"Workflow strategy explanation: {strategy_explanation}")
+            # TODO: Return the strategy explanation along with the workflow results, so that it can be presented to the user together with the results.
+
             pycode = _extract_labeled_code_block(sample_result.text, "python")
             if not pycode:
                 raise ValueError(
@@ -677,7 +648,11 @@ and will copy-paste it into an execution environment.
             # Inject some helper functions.
             pycode += "\n\n\n" + INJECT_RUC_LLM_CALL_FUNCTION
 
-            return pycode
+            return {
+                "pycode": pycode,
+                "implementation_strategy": strategy_explanation,
+            }
+
         except Exception as e:
             await ctx.warning(
                 f"Attempt {attempt}/{MAX_ATTEMPTS} failed while writing workflow code: {e}"
@@ -1180,13 +1155,16 @@ async def ruc_execute_semantic_code_workflow(
         # If the model says it's not ready, we should stop here and return an error message to the user.
         return {
             "status": "error",
+            "execution_time_seconds": int(time.time() - start_time),
             "message": "Model indicated it was not ready to write workflow code.",
             "details": str(e),
             "execution_notes": execution_notes.strip()
             or "(no notes recorded during execution)",
         }
 
-    pycode = await _write_workflow(ctx, convo)
+    workflow_generation_result = await _write_workflow(ctx, convo)
+    pycode = workflow_generation_result["pycode"]
+    implementation_strategy = workflow_generation_result["implementation_strategy"]
 
     logger.info(
         "Workflow written. Now checking for any stub functions that need implementations, "
@@ -1201,7 +1179,9 @@ async def ruc_execute_semantic_code_workflow(
     # the actual results of that execution.
 
     # DEBUG: Save pycode to a local file, so we can inspect it if anything goes wrong during execution.
-    with open("./logs/temp_auto_generated_workflow.py", "w", encoding="utf-8") as f:
+    with open(
+        "/workflow/logs/temp_auto_generated_workflow.py", "w", encoding="utf-8"
+    ) as f:
         f.write(pycode)
 
     try:
@@ -1209,22 +1189,22 @@ async def ruc_execute_semantic_code_workflow(
         elapsed_seconds = int(time.time() - start_time)
         await ctx.info(f"Workflow execution complete after {elapsed_seconds} seconds.")
     except Exception as e:
-        elapsed_seconds = int(time.time() - start_time)
         logger.error(
-            f"Workflow execution failed after {elapsed_seconds} seconds: {e}",
+            f"Workflow execution failed: {e}",
             exc_info=True,
         )
         return {
             "status": "error",
-            "message": f"Workflow execution failed after {elapsed_seconds} seconds.",
+            "execution_time_seconds": int(time.time() - start_time),
+            "implementation_strategy": implementation_strategy,
+            "message": f"Workflow execution failed.",
             "details": str(e),
             "execution_notes": execution_notes.strip()
             or "(no notes recorded during execution)",
         }
 
-    elapsed_seconds = int(time.time() - start_time)
     execution_notes += (
-        f"\n\nWorkflow executed successfully after {elapsed_seconds} seconds."
+        f"\n\nWorkflow executed successfully."
         "\n\nPlease take a moment to "
         "inspect the results and confirm that they look like what you were asking for. "
         "If not, please consider running RUC again with a clearer task description, "
@@ -1234,6 +1214,9 @@ async def ruc_execute_semantic_code_workflow(
 
     retval = {
         "status": "success",
+        "execution_time_seconds": elapsed_seconds,
+        "implementation_strategy": implementation_strategy,
+        "result": runresult,
         "execution_notes": execution_notes.strip()
         or "(no notes recorded during execution)",
     }
