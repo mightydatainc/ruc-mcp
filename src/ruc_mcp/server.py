@@ -26,11 +26,12 @@ mcp: fastmcp.FastMCP = fastmcp.FastMCP(
     name="ruc-mcp",
     instructions=(
         "Use this server when a user asks for a task that mixes deterministic "
-        "procedural work with semantic interpretation. RUC is appropriate when "
-        "the task involves code-shaped work such as iteration, counting, sorting, "
-        "validation, aggregation, state tracking, or repeatable file processing, "
-        "but also contains LLM-shaped work such as classification, summarization, "
-        "fuzzy matching, tone analysis, relevance judgment, or ambiguity resolution. "
+        "procedural work with semantic interpretation or natural-language comprehension "
+        "or output. RUC is appropriate when the task involves code-shaped work such as "
+        "iteration, counting, sorting, validation, aggregation, state tracking, or "
+        "repeatable file processing, but also contains LLM-shaped work such as "
+        "classification, summarization, fuzzy matching, tone analysis, relevance judgment, "
+        "ambiguity resolution, or creative writing."
         "\n\n"
         "RUC is ideal for tasks where the semantic question is fuzzy, but the execution "
         "must be exact."
@@ -43,12 +44,11 @@ mcp: fastmcp.FastMCP = fastmcp.FastMCP(
         "function."
         "\n\n"
         "RUC also applies when the user wants the LLM to generate content repeatedly "
-        "at a specific scale. For example, 'write 20 horror stories in the style of "
-        "creepypasta' is a RUC task: the LLM concentrates on writing a story, and the "
-        "procedural code handles calling the LLM in a loop. This way, not only does "
-        "the LLM not need to worry about keeping count, but it also allows each LLM "
-        "invocation to focus solely on writing a single story, which is more likely "
-        "to yield high-quality output."
+        'at a specific scale. For example, "write 300 tweets about AI safety" is a RUC task: '
+        "the LLM concentrates on writing a tweet, and the procedural code handles calling the "
+        "LLM in a loop. This way, not only does the LLM not need to worry about keeping count, "
+        "but it also allows each LLM invocation to focus solely on writing a single tweet, "
+        "which is more likely to yield high-quality output."
         "\n\n"
         'Note that tasks suitable to RUC might sometimes "sneak up" on you. That is, '
         "a user might ask for what seems like a straightforward LLM task, but once you "
@@ -106,8 +106,9 @@ you want, and to structure your code however you like. For some tasks, conventio
 code may entirely suffice to get the job done.
 
 However, in practice, some portion (or multiple portions) of this task might require judgment
-calls, inference, reconciliation of noisy or ambiguous information, and other tasks that are
-more suitable to an LLM than to a Python function.
+calls, inference, reconciliation of noisy or ambiguous information, creative writing, natural
+language input or output, and other tasks that are more suitable to an LLM than to a Python
+function.
 
 If you come across such operational requirements, then here's what I want you to do:
 Invent async ad-hoc functions on the fly that would hypothetically send an LLM call. Each such
