@@ -1025,13 +1025,22 @@ async def ruc_execute_semantic_code_workflow(
             )
         ),
     ] = None,
-    desired_result_schema: Annotated[
-        dict[str, Any] | None,
+    how_to_present_output: Annotated[
+        str | None,
         Field(
             description=(
-                "Optional JSON Schema describing the expected shape of the final result. "
-                "If not provided, RUC will decide for itself what an appropriate result schema "
-                "should be, based on the task description."
+                "Optional. Provide instructions for how the final output should be presented, "
+                "what format it should be in, and where/how it should be delivered. For example, "
+                "do you want just a string? Do you want a JSON object? Do you want the "
+                "results written to a file? If so, what should the file be called, and where "
+                "should it be saved? Should the results overwrite an existing file, or should "
+                "they be appended to it, or should a new file be created with a unique name? "
+                "Should a file be written in-place, or would you prefer to see a list of "
+                "edits in unified diff format that you can review and apply using a diff tool? "
+                "RUC doesn't have access to your entire filesystem, but it *does* run in a "
+                "Docker container with /workspace as a mount point; so if you want it to "
+                "write to the filesystem for output, specify a path under /workspace (e.g. "
+                "/workspace/results.json)."
             )
         ),
     ] = None,
@@ -1122,10 +1131,10 @@ async def ruc_execute_semantic_code_workflow(
             "\n\n" + "\n\n".join(f"- {req}" for req in behavioral_requirements)
         )
 
-    if desired_result_schema:
+    if how_to_present_output:
         convo.append(
-            "The final result of this execution should adhere to this expected schema:"
-            "\n\n" + json.dumps(desired_result_schema, indent=2)
+            "INSTRUCTIONS FOR HOW TO PRESENT YOUR OUTPUT: "
+            "\n\n" + how_to_present_output
         )
 
     if data_previews and len(data_previews) > 0:
