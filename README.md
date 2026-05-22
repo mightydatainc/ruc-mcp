@@ -1,4 +1,20 @@
-# Render Unto Caesar (`ruc-mcp`)
+# Render Unto Caesar (RUC) (`ruc-mcp`)
+
+> **If you've built a machine whose whole purpose is to be less machine-like, but you still ask it to do machine-like things, you're going to have a bad time.**
+>
+> Foundation model developers keep training LLMs to follow user instructions more faithfully. They expend untold gigajoules of energy and eons of CPU/GPU time trying to get neural networks -- fundamentally unpredictable probabilistic beasts -- to count in sequence, execute steps in the order they're given, and refrain from getting distracted or prematurely declaring completion or outright inventing completely new un-asked-for operations.
+>
+> This is a strange thing to optimize for.
+>
+> **We already have machines that follow instructions exactly, repeatably, and tirelessly. They are called computers.**
+>
+> Neural networks make bad computers. Yes, neural networks *run on* computers, but that fact alone doesn't magically grant them the ability to work *as* computers -- any more so than the fact that you're made of cells automatically makes you a microbiologist.
+>
+> Neural nets are not bad computers because they need more reinforcement learning. They are bad computers because *they are not computers*. They are pattern-completion engines: powerful, flexible, fuzzy, associative, and astonishingly useful -- but fundamentally ill-suited to long procedural execution.
+>
+> This is not even unique to *artificial* neural nets. Human brains are biological neural nets, and we are terrible at executing long procedural workflows from memory. That is why we use checklists, calendars, recipe cards, cockpit procedures, laminated flowcharts, and sticky notes on refrigerators. It's called "externalized cognition". It's a superpower that's mostly unique to our species: we're smart enough to know what we're not smart about, and to use tools to patch the holes in our smarts. Externalized cognition exists precisely because neural cognition is not reliable procedure.
+>
+> RUC is built around that distinction: Let the neural network interpret the task. Let the computer execute it.
 
 LLMs make a great interface for requesting tasks, but a poor engine for executing them. They are good at writing verbiage and assessing messy or ambiguous information, but poor at carrying out long, exact procedures. When an operation requires both the fuzziness of LLMs and the methodical rigor of traditional code, **Render Unto Caesar** (RUC) bridges the gap. RUC separates the work into the parts that need interpretation and the parts that need machinery, and makes them interoperate to give you the best of both worlds.
 
