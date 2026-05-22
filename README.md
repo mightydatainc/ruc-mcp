@@ -24,18 +24,12 @@ Most users, even engineers, don’t naturally separate those two layers when the
 
 The result is a system that can do LLM-shaped work with the control, structure, and repeatability of procedural software.
 
-## Project status
-
-`ruc-mcp` is currently in the concept/prototype stage.
-
-The repository now includes an end-to-end prototype flow in which RUC generates workflow code, fills semantic stubs, and executes the workflow. The current execution path is still an in-process proof of concept and is not yet production-hardened.
-
 ## Core idea
 
 Render Unto Caesar is built around a simple split:
 
 - **Code handles** loops, state, arithmetic, validation, retries, files, progress tracking, and aggregation.
-- **LLMs handle** classification, summarization, ambiguity resolution, fuzzy matching, and other semantic decisions.
+- **LLMs handle** creative writing, classification, summarization, ambiguity resolution, fuzzy matching, and other semantic decisions.
 
 The important part is not merely that both are available. The important part is that RUC defines the boundary between them, so procedural code and LLM judgment can safely interoperate inside one workflow.
 
