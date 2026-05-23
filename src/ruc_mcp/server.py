@@ -527,8 +527,6 @@ and will copy-paste it into an execution environment.
                     "workflow strategy explanation."
                 )
             strategy_explanation = strategy_explanation_result.text.strip()
-            await ctx.info(f"Workflow strategy explanation: {strategy_explanation}")
-            # TODO: Return the strategy explanation along with the workflow results, so that it can be presented to the user together with the results.
 
             pycode = _extract_labeled_code_block(sample_result.text, "python")
             if not pycode:
