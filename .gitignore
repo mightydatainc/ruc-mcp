@@ -220,3 +220,4 @@ __marimo__/
 # Logs and temp directories
 logs/
 temp/
+tempdata/

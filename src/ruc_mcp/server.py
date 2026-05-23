@@ -869,9 +869,69 @@ so it should be written in a way that makes sense as an addition to the existing
             continue
 
         if "ACTION_SELECTED: FINISH" in s_action.text:
+            # This is our exit point from the data exploration loop!
             return report
 
-        elif "ACTION_SELECTED: AMEND_REPORT" in s_action.text:
+        # Produce a status update.
+        convo.append("===\nASSISTANT REPLIED\n===\n\n" + s_action.text)
+        convo.append("""
+In order to keep the user updated about what you're doing and to make sure you haven't frozen
+or gotten stuck, please provide a status update to explain the action you're about to
+perform. This status update should be a sentence fragment, only a handful of words long.
+
+It should look something like this:
+STATUS: Determining what version of Word quarterly_earnings.doc is in
+or
+STATUS: Reading first 100 records of customers.csv
+or
+STATUS: Found irregularities in orders.json
+or
+STATUS: Delimiters are pipes, not commas or tabs
+
+You get the idea.
+
+Try to make your status updates informative and specific, so that the user can understand
+exactly what you're doing. Here are a few examples of BAD status updates:
+- STATUS: Working on it (not informative, doesn't say what "it" is)
+- STATUS: Exploring data (not informative, doesn't say what aspect of the data is being explored
+      or how it's being explored)
+- STATUS: Writing code (not informative, doesn't say what the code is doing or why you want it 
+      to do that thing)
+- STATUS: Amending report (not informative, doesn't say what the amendment is about or what it
+      adds to the report)
+                     
+Because the space on the status line is so limited, try to avoid saying things like
+"Writing code" or "Amending report". We *know* that you're doing one of those things,
+because we are aware of how the data exploration loop works. Instead, focus on the specific
+content of what you're doing. For example, don't say, "Writing code to determine number of
+records in customers.csv". Instead, say, "Determining number of records in customers.csv".
+Don't say, "Amending report to document 27 records with missing fields in orders.json".
+Instead, say, "27 records with missing fields in orders.json".
+
+Emit your reply as a line that starts with "STATUS:", followed by your status update.
+""")
+        status_update = await ctx.sample(
+            messages=convo,
+            system_prompt=system_prompt,
+            max_tokens=1000,
+        )
+        if not status_update.text:
+            await ctx.warning(
+                "LLM returned no text in response to the data exploration status update prompt. "
+            )
+        else:
+            status_text = status_update.text.strip()
+            if "STATUS:" in status_text:
+                status_text = status_text.split("STATUS:", 1)[1].strip()
+            if "\n" in status_text:
+                status_text = status_text.split("\n", 1)[0].strip()
+            await ctx.report_progress(
+                progress=0,
+                total=None,
+                message=status_text,
+            )
+
+        if "ACTION_SELECTED: AMEND_REPORT" in s_action.text:
             amendment = _extract_labeled_code_block(s_action.text, "reportamendment")
             if not amendment:
                 await ctx.warning(
