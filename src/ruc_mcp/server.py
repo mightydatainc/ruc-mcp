@@ -414,7 +414,6 @@ def _delete_all_functions_with_designated_marker(
 async def _write_workflow(ctx: fastmcp.Context, convo: list[str]) -> dict[str, str]:
     """Write a Python function that performs a procedural workflow that includes
     "fuzzy" operations."""
-    await ctx.info("Writing workflow code...")
     await ctx.report_progress(
         progress=0,
         total=None,
@@ -424,7 +423,9 @@ async def _write_workflow(ctx: fastmcp.Context, convo: list[str]) -> dict[str, s
     convo = json.loads(json.dumps(convo))  # Deep-copy to ensure immutability.
 
     # Sidebar: sanity-check first.
-    convo_sanity = json.loads(json.dumps(convo))  # Deep-copy for immutability.
+    convo_sanity: list[str] = json.loads(
+        json.dumps(convo)
+    )  # Deep-copy for immutability.
     convo_sanity.append("""
 Before we begin, let's perform a sanity-check to make sure that we are able to proceed.
 Do you have enough information and guidance to start writing code for the workflow?
@@ -733,14 +734,9 @@ async def _replace_all_stubs_with_implementations(
     ctx: fastmcp.Context,
     pycode: str,
     convo: list[str],
-):
+) -> str:
     """Find any stub functions in the given code, and replace them with real implementations."""
-    logger = logging.getLogger(__name__)
     convo = json.loads(json.dumps(convo))  # Deep-copy to ensure immutability.
-
-    await ctx.info(
-        "Wiring the workflow's non-procedural portions back into LLM calls..."
-    )
 
     # We marked these stub functions with a special syntax in the TODO comment,
     # so we can grep for them.
@@ -748,7 +744,15 @@ async def _replace_all_stubs_with_implementations(
     # "TODO(llm_stub: stub_function_name): description of what the function should do".
     stub_pattern = re.compile(r"TODO\(llm_stub:\s*(\w+)\):\s*(.*?)\n")
     stubs = stub_pattern.findall(pycode)
-    logger.info("Found %d stub functions to implement: %s", len(stubs), stubs)
+
+    if not stubs or len(stubs) == 0:
+        return pycode
+
+    await ctx.report_progress(
+        progress=0,
+        total=None,
+        message=f"Implementing {len(stubs)} mid-workflow LLM callbacks",
+    )
 
     stubfunctions_by_name: dict[str, str] = {}
 
@@ -808,6 +812,41 @@ async def _explore_data(
     about the data, as well as a sample of records from each data source."""
 
     convo = json.loads(json.dumps(convo))  # Deep-copy to ensure immutability.
+
+    convo_sanity: list[str] = json.loads(
+        json.dumps(convo)
+    )  # Deep-copy for immutability.
+    convo_sanity.append("""
+Does the description of data sources literally just tell us that there are no
+data sources? I.e. is it, like, a list saying, "This list is empty," or a string saying
+something like, "No data sources are needed for this task," or something like that?
+
+Talk about this with yourself. Perform a chain-of-thought reasoning process.
+
+When you're done, emit a final conclusion by writing, on its own line by itself, either
+"DATA SOURCE DESCRIPTION INDICATES NO DATA SOURCES", or else
+"YES WE ARE BEING DIRECTED TO DATA SOURCES". Just like that, on its own line,
+in all caps.
+""")
+    s_sanity_check_result = await ctx.sample(
+        messages=convo_sanity,
+        system_prompt=RUC_FUNCTION_WRITING_SYSTEM_PROMPT,
+        max_tokens=10_000,
+    )
+    s_sanity_check_text = s_sanity_check_result.text
+    if not s_sanity_check_text:
+        await ctx.warning(
+            "LLM returned no text when trying to perform the data source sanity check."
+        )
+    else:
+        if "DATA SOURCE DESCRIPTION INDICATES NO DATA SOURCES" in s_sanity_check_text:
+            await ctx.info("The data source description indicates no data sources.")
+            return ""
+
+        if not ("YES WE ARE BEING DIRECTED TO DATA SOURCES" in s_sanity_check_text):
+            await ctx.warning(
+                "LLM did not explicitly indicate that we are being directed to data sources."
+            )
 
     report = ""
 
@@ -1431,6 +1470,11 @@ async def ruc_execute_semantic_code_workflow(
         "and replacing them with real code."
     )
 
+    await ctx.report_progress(
+        progress=0,
+        total=None,
+        message="Implementing mid-workflow LLM calls (if any).",
+    )
     pycode = await _replace_all_stubs_with_implementations(ctx, pycode, convo)
     pycode = _delete_all_functions_with_designated_marker(pycode, "obsolete_stub")
 
@@ -1454,23 +1498,23 @@ async def ruc_execute_semantic_code_workflow(
 
     execution_notes = "\n\n"
 
-    # DEBUG: Save pycode to a local file, so we can inspect it if anything goes wrong during
-    # execution.
-    if write_execution_workflow_file:
-        try:
-            with open(write_execution_workflow_file, "w", encoding="utf-8") as f:
-                f.write(pycode)
-            execution_notes += f"Generated workflow code was written to file: {write_execution_workflow_file}\n\n"
-        except Exception as e:
-            await ctx.error(
-                f"Failed to write generated workflow code to file {write_execution_workflow_file}: {e}",
-            )
-            execution_notes += (
-                f"Warning: Failed to write generated workflow code to file: "
-                f"{write_execution_workflow_file}\n\n"
-            )
-
     while True:
+        # DEBUG: Save pycode to a local file, so we can inspect it if anything goes wrong during
+        # execution.
+        if write_execution_workflow_file:
+            try:
+                with open(write_execution_workflow_file, "w", encoding="utf-8") as f:
+                    f.write(pycode)
+                execution_notes += f"Generated workflow code was written to file: {write_execution_workflow_file}\n\n"
+            except Exception as e:
+                await ctx.error(
+                    f"Failed to write generated workflow code to file {write_execution_workflow_file}: {e}",
+                )
+                execution_notes += (
+                    f"Warning: Failed to write generated workflow code to file: "
+                    f"{write_execution_workflow_file}\n\n"
+                )
+
         await ctx.report_progress(
             progress=0,
             total=None,
@@ -1482,14 +1526,6 @@ async def ruc_execute_semantic_code_workflow(
             runresult = await _execute_workflow_code(ctx, pycode)
             break  # If execution is successful, break out of the loop and return the result.
 
-            # TODO: In the future, we'd like to add some code editing or bug-fixing capabilities here,
-            # so that if the workflow execution fails due to an error in the generated code, the model
-            # can attempt to fix the code and re-run it, without us having to go back to square one
-            # with the entire workflow generation process. However, we need to be very careful about
-            # how we splice code repairs into the original code, because we don't want to accidentally
-            # mess up the structure of the code.
-            # NOTE: When we edit/revise the pycode, remember to also update the file that we save for
-            # debugging purposes, so that it reflects the actual code that gets executed.
         except Exception as e:
             logger.error(
                 f"Workflow execution failed: {e}",
