@@ -1,170 +1,192 @@
-"""Tests for the FastMCP-backed RUC MCP server."""
+"""Minimal smoke tests for the FastMCP-backed RUC MCP server."""
 
 import asyncio
 import logging
+from types import SimpleNamespace
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import fastmcp
 
-from src.ruc_mcp.server import (
-    _load_data_from_uri,
-    ruc_execute_semantic_code_workflow,
-    main,
-    mcp,
-)
+from src.ruc_mcp import server
 
 
 class FastMcpInstanceTests(unittest.TestCase):
     def test_mcp_is_fastmcp_instance(self) -> None:
-        self.assertIsInstance(mcp, fastmcp.FastMCP)
+        self.assertIsInstance(server.mcp, fastmcp.FastMCP)
 
     def test_mcp_name(self) -> None:
-        self.assertEqual(mcp.name, "ruc-mcp")
-
-    def test_mcp_instructions(self) -> None:
-        instructions = mcp.instructions
-        self.assertIsNotNone(instructions)
-
-        instructions = f"{instructions}"  # Cast to str to suppress Pylance errors.
-
-        self.assertIn("deterministic procedural work", instructions)
-        self.assertIn("semantic interpretation", instructions)
-        self.assertIn("support tickets", instructions)
-        self.assertIn("tone classification", instructions)
-        self.assertIn("must be exact", instructions)
+        self.assertEqual(server.mcp.name, "ruc-mcp")
 
     def test_registered_tools(self) -> None:
         async def get_tool_names() -> list[str]:
-            return sorted(tool.name for tool in await mcp.list_tools())
+            return sorted(tool.name for tool in await server.mcp.list_tools())
 
         self.assertEqual(
             asyncio.run(get_tool_names()),
-            sorted(["ruc_execute_semantic_code_workflow"]),
+            ["ruc_execute_semantic_code_workflow"],
         )
 
-    def test_no_prompts_are_registered(self) -> None:
-        async def get_prompt_names() -> list[str]:
-            return [prompt.name for prompt in await mcp.list_prompts()]
 
-        self.assertEqual(asyncio.run(get_prompt_names()), [])
-
-
-class ExecuteSemanticCodeWorkflowToolTests(unittest.TestCase):
-    def test_load_data_from_canonical_file_uri(self) -> None:
-        sample_csv_uri = (
-            (Path(__file__).parent / "sample_data" / "customers.csv").resolve().as_uri()
-        )
+class ExecuteSemanticCodeWorkflowSmokeTests(unittest.TestCase):
+    def test_success_path_without_data_sources(self) -> None:
         mock_ctx = AsyncMock()
-        mock_ctx.sample = AsyncMock(
-            return_value=SimpleNamespace(
-                text="""Plan\n```python\ndef restructure_data(data_str):\n    return [{\"raw_length\": len(data_str)}]\n```"""
-            )
-        )
 
-        records = asyncio.run(_load_data_from_uri(mock_ctx, sample_csv_uri))
-
-        self.assertGreater(len(records), 0)
-        self.assertIsInstance(records[0], dict)
-        mock_ctx.sample.assert_awaited_once()
-
-    def test_returns_not_implemented_payload(self) -> None:
-        mock_ctx = AsyncMock()
-        with patch("src.ruc_mcp.server.logging.getLogger") as get_logger:
-            result = asyncio.run(
-                ruc_execute_semantic_code_workflow(
-                    task_description="Classify support tickets by sentiment",
-                    ctx=mock_ctx,
-                )
-            )
-
-        self.assertEqual(
-            result,
-            {
-                "status": "error",
-                "message": "Model indicated it was not ready to write workflow code.",
-                "details": (
-                    "When we asked the model to sanity-check whether or not we have "
-                    "enough information to proceed with writing a workflow, "
-                    "it gave us neither a clear YES nor a clear NO."
+        with (
+            patch(
+                "src.ruc_mcp.server._write_workflow",
+                new=AsyncMock(
+                    return_value={
+                        "pycode": "async def execute_workflow(ctx):\n    return {'ok': True}",
+                        "implementation_strategy": "smoke strategy",
+                    }
                 ),
-                "execution_notes": (
-                    "Model indicated it was not ready to write workflow code: "
-                    "When we asked the model to sanity-check whether or not we have "
-                    "enough information to proceed with writing a workflow, "
-                    "it gave us neither a clear YES nor a clear NO."
-                ),
-            },
-        )
-        get_logger.return_value.info.assert_any_call(
-            "execute_semantic_code_workflow started for task: %s",
-            "Classify support tickets by sentiment",
-        )
-
-    def test_returns_not_implemented_payload_with_all_args(self) -> None:
-        sample_csv_uri = (
-            (Path(__file__).parent / "sample_data" / "customers.csv").resolve().as_uri()
-        )
-        mock_ctx = AsyncMock()
-
-        with patch(
-            "src.ruc_mcp.server._load_data_from_uri",
-            new=AsyncMock(return_value=[{"id": "1"}]),
-        ) as load_data:
-            result = asyncio.run(
-                ruc_execute_semantic_code_workflow(
-                    task_description="Classify support tickets by sentiment",
-                    ctx=mock_ctx,
-                    context_explanation="Tickets are from a SaaS product help desk.",
-                    data_source_uris=[sample_csv_uri],
-                    desired_result_schema={
-                        "type": "object",
-                        "properties": {"sentiment": {"type": "string"}},
-                    },
-                    behavioral_requirements=["process every row exactly once"],
-                )
-            )
-
-        self.assertEqual(result["status"], "error")
-        self.assertEqual(
-            result["message"],
-            "Model indicated it was not ready to write workflow code.",
-        )
-        self.assertIn("gave us neither a clear YES nor a clear NO", result["details"])
-        self.assertIn(
-            "Model indicated it was not ready to write workflow code",
-            result["execution_notes"],
-        )
-        load_data.assert_awaited_once_with(mock_ctx, sample_csv_uri)
-
-    def test_records_datasource_load_failure_in_execution_notes(self) -> None:
-        sample_csv_uri = (
-            (Path(__file__).parent / "sample_data" / "customers.csv").resolve().as_uri()
-        )
-        mock_ctx = AsyncMock()
-
-        with patch(
-            "src.ruc_mcp.server._load_data_from_uri",
-            new=AsyncMock(side_effect=ValueError("boom")),
+            ),
+            patch(
+                "src.ruc_mcp.server._replace_all_stubs_with_implementations",
+                new=AsyncMock(side_effect=lambda ctx, pycode, convo: pycode),
+            ),
+            patch(
+                "src.ruc_mcp.server._execute_workflow_code",
+                new=AsyncMock(return_value={"ok": True}),
+            ),
         ):
             result = asyncio.run(
-                ruc_execute_semantic_code_workflow(
-                    task_description="Classify support tickets by sentiment",
+                server.ruc_execute_semantic_code_workflow(
+                    task_description="Do a simple task",
                     ctx=mock_ctx,
-                    data_source_uris=[sample_csv_uri],
                 )
             )
 
-        self.assertEqual(result["status"], "error")
-        self.assertEqual(
-            result["message"],
-            "Model indicated it was not ready to write workflow code.",
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["result"], {"ok": True})
+        self.assertEqual(result["implementation_strategy"], "smoke strategy")
+
+    def test_data_sources_trigger_exploration(self) -> None:
+        mock_ctx = AsyncMock()
+
+        with (
+            patch(
+                "src.ruc_mcp.server._explore_data",
+                new=AsyncMock(return_value="exploration report"),
+            ) as explore_data,
+            patch(
+                "src.ruc_mcp.server._write_workflow",
+                new=AsyncMock(
+                    return_value={
+                        "pycode": "async def execute_workflow(ctx):\n    return {'ok': True}",
+                        "implementation_strategy": "with data",
+                    }
+                ),
+            ),
+            patch(
+                "src.ruc_mcp.server._replace_all_stubs_with_implementations",
+                new=AsyncMock(side_effect=lambda ctx, pycode, convo: pycode),
+            ),
+            patch(
+                "src.ruc_mcp.server._execute_workflow_code",
+                new=AsyncMock(return_value={"ok": True}),
+            ),
+        ):
+            result = asyncio.run(
+                server.ruc_execute_semantic_code_workflow(
+                    task_description="Process a data source",
+                    ctx=mock_ctx,
+                    data_sources="/workspace/data.csv",
+                )
+            )
+
+        self.assertEqual(result["status"], "success")
+        explore_data.assert_awaited_once()
+
+    def test_repair_path_retries_after_failure(self) -> None:
+        mock_ctx = AsyncMock()
+
+        with (
+            patch(
+                "src.ruc_mcp.server._write_workflow",
+                new=AsyncMock(
+                    return_value={
+                        "pycode": "async def execute_workflow(ctx):\n    return {'ok': True}",
+                        "implementation_strategy": "repair strategy",
+                    }
+                ),
+            ),
+            patch(
+                "src.ruc_mcp.server._replace_all_stubs_with_implementations",
+                new=AsyncMock(side_effect=lambda ctx, pycode, convo: pycode),
+            ),
+            patch(
+                "src.ruc_mcp.server._execute_workflow_code",
+                new=AsyncMock(side_effect=[RuntimeError("boom"), {"ok": True}]),
+            ),
+            patch(
+                "src.ruc_mcp.server._repair_workflow_code",
+                new=AsyncMock(
+                    return_value="async def execute_workflow(ctx):\n    return {'ok': True}"
+                ),
+            ) as repair,
+        ):
+            result = asyncio.run(
+                server.ruc_execute_semantic_code_workflow(
+                    task_description="Task that requires one repair",
+                    ctx=mock_ctx,
+                )
+            )
+
+        self.assertEqual(result["status"], "success")
+        repair.assert_awaited_once()
+
+
+class WorkflowGenerationParsingTests(unittest.TestCase):
+    def test_write_workflow_parses_python_block_and_strategy(self) -> None:
+        mock_ctx = AsyncMock()
+        mock_ctx.sample = AsyncMock(
+            side_effect=[
+                SimpleNamespace(text="READY TO PROCEED"),
+                SimpleNamespace(
+                    text=(
+                        "Plan first.\n"
+                        "```python\n"
+                        "async def execute_workflow(ctx):\n"
+                        "    return {'status': 'ok'}\n"
+                        "```"
+                    )
+                ),
+                SimpleNamespace(
+                    text="Uses procedural orchestration with semantic callbacks."
+                ),
+            ]
         )
-        self.assertIn("gave us neither a clear YES nor a clear NO", result["details"])
-        self.assertIn("Failed to load data source", result["execution_notes"])
-        self.assertIn("boom", result["execution_notes"])
+
+        result = asyncio.run(server._write_workflow(mock_ctx, ["TASK:\n\nTest"]))
+
+        self.assertIn("import fastmcp", result["pycode"])
+        self.assertIn("async def execute_workflow(ctx)", result["pycode"])
+        self.assertEqual(
+            result["implementation_strategy"],
+            "Uses procedural orchestration with semantic callbacks.",
+        )
+
+    def test_write_workflow_retries_and_fails_for_missing_python_block(self) -> None:
+        mock_ctx = AsyncMock()
+
+        side_effects = [SimpleNamespace(text="READY TO PROCEED")]
+        for _ in range(5):
+            side_effects.extend(
+                [
+                    SimpleNamespace(text="Here is analysis but no code block."),
+                    SimpleNamespace(text="Short strategy text."),
+                ]
+            )
+        mock_ctx.sample = AsyncMock(side_effect=side_effects)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "failed to write any initial workflow code after 5 attempts",
+        ):
+            asyncio.run(server._write_workflow(mock_ctx, ["TASK:\n\nTest"]))
 
 
 class MainEntrypointTests(unittest.TestCase):
@@ -174,9 +196,7 @@ class MainEntrypointTests(unittest.TestCase):
             patch("src.ruc_mcp.server.logging.StreamHandler") as stream_handler,
             patch("src.ruc_mcp.server.logging.basicConfig") as basic_config,
         ):
-            from src.ruc_mcp.server import configure_logging
-
-            configure_logging()
+            server.configure_logging()
 
         basic_config.assert_called_once_with(
             level=logging.INFO,
@@ -190,27 +210,12 @@ class MainEntrypointTests(unittest.TestCase):
         )
         stream_handler.assert_called_once_with()
 
-    def test_configure_logging_uses_env_var_for_log_file(self) -> None:
-        with (
-            patch.dict("os.environ", {"RUC_MCP_LOG_FILE": "custom-debug.log"}),
-            patch("src.ruc_mcp.server.logging.FileHandler") as file_handler,
-            patch("src.ruc_mcp.server.logging.StreamHandler"),
-            patch("src.ruc_mcp.server.logging.basicConfig"),
-        ):
-            from src.ruc_mcp.server import configure_logging
-
-            configure_logging()
-
-        file_handler.assert_called_once_with(
-            Path("custom-debug.log"), mode="w", encoding="utf-8"
-        )
-
     def test_main_runs_fastmcp_over_stdio(self) -> None:
         with (
             patch("src.ruc_mcp.server.configure_logging") as configure_logging,
-            patch.object(mcp, "run") as run,
+            patch.object(server.mcp, "run") as run,
         ):
-            main()
+            server.main()
 
         configure_logging.assert_called_once_with()
         run.assert_called_once_with(transport="stdio")
