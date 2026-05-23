@@ -1312,6 +1312,8 @@ async def ruc_execute_semantic_code_workflow(
                 "(e.g. file URI, API endpoint, database connection string) and what format "
                 "the data is in (e.g. CSV, JSON, SQL). Not all tasks rely on data sources, "
                 "but those that do will require this information."
+                "\n\n"
+                "If the task doesn't require any data sources, leave this blank."
             )
         ),
     ] = None,
@@ -1331,6 +1333,12 @@ async def ruc_execute_semantic_code_workflow(
                 "Docker container with /workspace as a mount point; so if you want it to "
                 "write to the filesystem for output, specify a path under /workspace (e.g. "
                 "/workspace/results.json)."
+                "\n\n"
+                "NOTE: For debugging purposes, you might sometimes be asked to make RUC write "
+                "the generated workflow code to a file. DO **NOT** put instructions about "
+                "writing the workflow code file in this field! Those instructions belong in "
+                "the `write_execution_workflow_file` field. The workflow can't see its own "
+                'source code anyway, so it can\'t regard it as "output".'
             )
         ),
     ] = None,
