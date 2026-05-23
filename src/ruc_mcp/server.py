@@ -1151,6 +1151,37 @@ async def ruc_execute_semantic_code_workflow(
             )
         ),
     ] = None,
+    write_execution_workflow_file: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional, and purely for debugging purposes. If provided, RUC will save the "
+                "generated workflow code to a file at this path. This enables the human user to "
+                "inspect the generated code, which can be useful if something goes wrong during "
+                "execution and you want to understand why."
+                "\n\n"
+                "The file should be specified with a full pathname under /workspace, "
+                "since that's the only part of the filesystem that the RUC Docker container has "
+                "access to. Ideally, you'd find a temp folder or gitignored folder somewhere in "
+                "your project directory. For example, "
+                '"/workspace/temp/ruc_generated_workflow.py" would be a good value for this '
+                "field."
+                "\n\n"
+                "If the file already exists, it will be overwritten."
+                "\n\n"
+                "The LLM is never shown the value of this field. It's not passed to the LLM in "
+                "its prompts, and the LLM has no ability to write its own code to this file "
+                "anyway. Do not put instructions about saving the execution workflow file in the "
+                "task description or any other fields, because the LLM won't be able to follow "
+                "those instructions, and it might get confused by them."
+                "\n\n"
+                "Under normal circumstances, you should never need to use this field. It's "
+                "provided merely as a debugging aid for particularly tech-savvy users. Do not "
+                "use this field unless you have a specific reason to want to inspect the generated "
+                "workflow code."
+            )
+        ),
+    ] = None,
 ) -> dict[str, Any]:
     """Execute a mixed semantic/procedural RUC workflow.
 
@@ -1241,11 +1272,11 @@ async def ruc_execute_semantic_code_workflow(
     # this function will need to execute the generated code in a sandboxed environment and return
     # the actual results of that execution.
 
-    # DEBUG: Save pycode to a local file, so we can inspect it if anything goes wrong during execution.
-    with open(
-        "/workspace/logs/temp_auto_generated_workflow.py", "w", encoding="utf-8"
-    ) as f:
-        f.write(pycode)
+    # DEBUG: Save pycode to a local file, so we can inspect it if anything goes wrong during
+    # execution.
+    if write_execution_workflow_file:
+        with open(write_execution_workflow_file, "w", encoding="utf-8") as f:
+            f.write(pycode)
 
     try:
         runresult = await _execute_workflow_code(ctx, pycode)
@@ -1254,10 +1285,12 @@ async def ruc_execute_semantic_code_workflow(
 
         # TODO: In the future, we'd like to add some code editing or bug-fixing capabilities here,
         # so that if the workflow execution fails due to an error in the generated code, the model
-        # can attempt to fix the code and re-run it, without us having to go back to square one with
-        # the entire workflow generation process. However, we need to be very careful about how
-        # we splice code repairs into the original code, because we don't want to accidentally
+        # can attempt to fix the code and re-run it, without us having to go back to square one
+        # with the entire workflow generation process. However, we need to be very careful about
+        # how we splice code repairs into the original code, because we don't want to accidentally
         # mess up the structure of the code.
+        # NOTE: When we edit/revise the pycode, remember to also update the file that we save for
+        # debugging purposes, so that it reflects the actual code that gets executed.
     except Exception as e:
         logger.error(
             f"Workflow execution failed: {e}",
