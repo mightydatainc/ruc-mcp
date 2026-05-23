@@ -81,3 +81,15 @@ This keeps MCP startup fast and predictable because VS Code only launches the co
 
 - Add resumable execution behavior so interrupted runs can pick up from saved progress.
 - Add caching for frequently requested workflows to reduce repeated generation overhead.
+- Add network access
+  - Needs a way to constrain volume of page loads
+  - Needs a way to present pages to the LLM in a textually meaningful way
+  - Needs a way to run a real browser
+    - Leverage JavaScript
+    - Leverage semantically significant layout details (e.g. elements with `display: none` or `opacity: 0` don't count)
+    - Possibly leverage user's cookies, existing login states, etc.
+- Add support for MCP sampling tool calls
+  - VS Code doesn't support sampling tool calls anyway
+  - Sampling tool support should be conditional
+    - Structured JSON is currently conditional anyway
+
