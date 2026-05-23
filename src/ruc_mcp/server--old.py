@@ -318,6 +318,234 @@ def _extract_labeled_code_block(response_text: str, label: str) -> str:
     )
 
 
+def _construct_data_source_previews(
+    data_source_records: dict[str, list[dict[str, Any]]],
+) -> list[str]:
+    """Construct limited-length previews of JSON dumps of the data collections,
+    suitable for inclusion in user messages to the LLM."""
+    previews = []
+    MAX_CHARACTERS_PER_SOURCE = 5000
+    for uri, records in data_source_records.items():
+        preview_str = f"Data source: {uri}\n"
+        preview_str += (
+            f"JSON dump preview (first {MAX_CHARACTERS_PER_SOURCE} characters):\n\n"
+        )
+        try:
+            records_str = json.dumps(records, indent=2)
+            if len(records_str) > MAX_CHARACTERS_PER_SOURCE:
+                records_str = records_str[:MAX_CHARACTERS_PER_SOURCE] + "..."
+            preview_str += f"\n\n{records_str}"
+        except Exception as e:
+            preview_str += (
+                f"\n\n(Could not generate preview of records due to error: {e})"
+            )
+        previews.append(preview_str)
+    return previews
+
+
+async def _load_data_from_uri(ctx: fastmcp.Context, uri: str) -> list[dict[str, Any]]:
+    """Load data from a given URI and return it as a list of records."""
+    logger = logging.getLogger(__name__)
+    await ctx.info(f"Loading data source: {uri}")
+
+    parsed_uri = urlparse(uri)
+    if parsed_uri.scheme != "file":
+        await ctx.error(
+            f'Unsupported URI scheme "{parsed_uri.scheme}" in {uri}\n'
+            "Currently only file URIs with absolute paths are supported "
+            "(e.g. file:///C:/path/to/file.csv). If your data source is not a file, "
+            "please download or export it to a file and try again, "
+            "providing a file URI pointing to it."
+        )
+
+    data_str = ""
+
+    try:
+        # TODO: Revise the input file access strategy when MCP launch moves into Docker.
+        # The current implementation assumes the server process can read host file URIs directly.
+        # Canonical Windows URI: file:///C:/path/to/file.csv
+        # Also preserves compatibility with file://C:/path style during transition.
+        if parsed_uri.netloc and parsed_uri.netloc != "localhost":
+            if len(parsed_uri.netloc) == 2 and parsed_uri.netloc[1] == ":":
+                file_uri_path = f"/{parsed_uri.netloc}{parsed_uri.path}"
+            else:
+                file_uri_path = f"//{parsed_uri.netloc}{parsed_uri.path}"
+        else:
+            file_uri_path = parsed_uri.path
+
+        file_path = Path(url2pathname(unquote(file_uri_path)))
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            data_str = f.read()
+
+    except Exception as e:
+        logger.error("Failed to read data from %s: %s", uri, e)
+        raise ValueError(f"Could not read data from {uri}: {e}")
+
+    SNIPPET_LENGTH = 10000
+    data_str_preview = (
+        data_str[:SNIPPET_LENGTH] + "..."
+        if len(data_str) > SNIPPET_LENGTH
+        else data_str
+    )
+
+    system_prompt = """
+The user will copy-paste a snippet from the beginning of some kind of data file. We don't know 
+a priori what format it's in or what its structure or contents are; hopefully this will become
+obvious once the client presents the data.
+
+I want this data restructured into a JSON list of dicts.
+
+Here's the catch, though: I don't want you to restructure it yourself. It's way too much data,
+and I don't want you to lose your place or get confused. Or to burn too many tokens trying to
+analyze it as an LLM, for that matter.
+
+Instead, I want you to write a Python function called `restructure_data`. This function takes
+a string (the full contents of the user's data file), and returns a list of dicts. 
+
+The Python environment you'll be running in is a Docker python:3.11-slim container. You can import
+default packages like `json` or `csv`, but you don't have access to fancy advanced tools like
+dataframes. You have access to the filesystem via the mount point /workspace.
+
+You should talk through your planned implementation first, to organize your plan and to
+strategize for the best approach to this problem.
+
+When you're ready to write the function, do it inside of a triple-backticked block labeled
+"```python". The contents of this block will be parsed and executed in the Python sandbox.
+In order to make it easy for me to find this block in your response, please make this block
+be the last thing you say, with no further requests or commentary after its closing 
+triple-backtick delimiter.
+"""
+
+    MAX_ATTEMPTS = 5
+    MAX_TOKENS = 15000
+    last_error = ""
+    last_stage = ""
+    last_traceback = ""
+
+    convo = [
+        SamplingMessage(
+            role="user",
+            content=TextContent(type="text", text=data_str_preview),
+        )
+    ]
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        error_stage = "sampling"
+        try:
+            sample_result = await ctx.sample(
+                messages=convo,
+                system_prompt=system_prompt,
+                max_tokens=MAX_TOKENS,
+            )
+
+            error_stage = "sampling_response"
+            if not sample_result.text:
+                raise ValueError(
+                    f"Sampling returned no text to execute when trying to parse data from {uri}."
+                )
+
+            convo.append(
+                SamplingMessage(
+                    role="assistant",
+                    content=TextContent(type="text", text=sample_result.text),
+                )
+            )
+
+            error_stage = "extract"
+            generated_code = _extract_labeled_code_block(sample_result.text, "python")
+
+            # POC path: run generated code directly in-process.
+            # Production hardening plan: execute this inside an ephemeral Docker container
+            # with strict CPU/memory/time limits, then destroy the container immediately.
+            error_stage = "exec"
+            namespace: dict[str, Any] = {
+                "__name__": "ruc_data_loader",
+                "__package__": None,
+            }
+            exec(generated_code, namespace, namespace)
+
+            error_stage = "function_lookup"
+            restructure_data = namespace.get("restructure_data")
+            if not callable(restructure_data):
+                raise ValueError(
+                    "Generated code did not define callable restructure_data(data_str)."
+                )
+
+            error_stage = "runtime"
+            # Note: client timeouts protect the caller's wait time, but they do not
+            # guarantee in-process generated code stops running immediately.
+            # For this POC we accept that risk; the Docker sandbox plan above is the
+            # intended safety boundary for reliable execution timeouts/cancellation.
+            records = restructure_data(data_str)
+
+            error_stage = "shape_validation"
+            if not isinstance(records, list) or not all(
+                isinstance(item, dict) for item in records
+            ):
+                raise ValueError("restructure_data must return a list of dictionaries.")
+
+            if records:
+                logger.info(
+                    "First record keys for %s: %s",
+                    uri,
+                    sorted(records[0].keys()),
+                )
+            else:
+                logger.info("Restructure returned an empty list for %s", uri)
+
+            logger.info(
+                "Restructured %d records from %s on attempt %d",
+                len(records),
+                uri,
+                attempt,
+            )
+            return cast(list[dict[str, Any]], records)
+        except Exception as e:
+            last_stage = error_stage
+            last_error = f"{type(e).__name__}: {e}"
+            last_traceback = traceback.format_exc()
+            logger.warning(
+                "Attempt %d/%d failed while restructuring %s at stage %s: %s",
+                attempt,
+                MAX_ATTEMPTS,
+                uri,
+                last_stage,
+                last_error,
+            )
+
+            if last_stage in ("sampling", "sampling_response"):
+                continue
+
+            convo.append(
+                SamplingMessage(
+                    role="user",
+                    content=TextContent(
+                        type="text",
+                        text=(
+                            f"Your previous code attempt resulted in this error when I tried to "
+                            f"run it.\n\n"
+                            f"Failure stage: {last_stage}\n"
+                            f"Error: {last_error}\n\n"
+                            f"Traceback:\n{last_traceback}\n"
+                            "Please revise your implementation to fix this error. Remember, I "
+                            "just want a function that takes the full data string and returns "
+                            "a list of dicts. Don't try to do anything fancy with it, and don't "
+                            "worry about performance - just get it working correctly."
+                            "\n\n"
+                            "As before, write your revised function in a triple-backticked block "
+                            "labeled ```python, and make it the last thing you say."
+                        ),
+                    ),
+                )
+            )
+
+    raise ValueError(
+        f"Failed to generate working restructure_data after {MAX_ATTEMPTS} attempts for {uri}. "
+        f"Last stage: {last_stage}. Last error: {last_error}"
+    )
+
+
 async def _write_workflow(ctx: fastmcp.Context, convo: list[str]) -> dict[str, str]:
     """Write a Python function that performs a procedural workflow that includes
     "fuzzy" operations."""
@@ -328,9 +556,7 @@ async def _write_workflow(ctx: fastmcp.Context, convo: list[str]) -> dict[str, s
         message="Writing workflow code",
     )
 
-    convo = json.loads(json.dumps(convo))  # Deep-copy to ensure immutability.
-
-    # TODO: Ask the LLM if it's ready to go.
+    convo = json.loads(json.dumps(convo))  # Deep-copy to ensure mutability.
 
     convo.append("""
 You now have everything you need (or at least, everything I can give you)
@@ -439,6 +665,89 @@ and will copy-paste it into an execution environment.
     )
 
 
+async def _is_ready_for_workflow(ctx: fastmcp.Context, convo: list[str]):
+    """Sanity-checks to see if we have enough information to proceed with writing a workflow."""
+    await ctx.info(
+        "Confirming that we have adequate information to proceed with writing workflow..."
+    )
+    await ctx.report_progress(
+        progress=0,
+        total=None,
+        message="Sanity-checking task requirements",
+    )
+
+    convo = json.loads(json.dumps(convo))  # Deep-copy to ensure mutability.
+
+    convo.append("""
+Before we get started, discuss the following matters:
+
+- Is the task clear? Do you understand what you're being asked to do?
+
+- Do you have all of the data sources that the task seems to need?
+
+- For each data source, what's the *shape* or *structure* of the data? 
+    Is the data something you can work with? (Note that I'm not asking you to make up what
+    you think the shape or structure *should* be. I'm asking you to describe what you see.
+    If there's a discrepancy between what you see and what you would expect, say so.)
+
+- For each data source, look at the preview/snapshot. Do you see any lurking anomalies or
+    inconsistencies that you'll have to code around? Basically, anything that might bite you
+    in the ass once the code is running?
+
+Discuss these matters. Take as much time or verbiage as you need; these are important to
+get right.
+
+Then, at the end of your discussion, answer one chief salient quesion: 
+If I were to paste in the implementations of the stub functions, then would you be good to go?
+Right now, unconditionally (assuming stub function flesh-out), without any further input... 
+Would you be able to write and execute `execute_workflow`?
+At the end of your response, write either "GOOD_TO_GO: YES", just like that, on its own line, 
+in all caps -- or else "GOOD_TO_GO: NO. ", followed by an explanation of why not.
+""")
+
+    sample_result = await ctx.sample(
+        messages=convo,
+        system_prompt=RUC_FUNCTION_WRITING_SYSTEM_PROMPT,
+        max_tokens=20_000,
+    )
+
+    if not sample_result.text:
+        raise ValueError(
+            "Sampling returned no text when sanity-checking whether or not we "
+            "have enough information to proceed with writing a workflow."
+        )
+
+    # Grep sample_result for "GOOD_TO_GO: YES". If it's there, we can exit.
+    if "GOOD_TO_GO: YES" in sample_result.text:
+        # Returning no value is a signal to proceed!
+        return
+
+    # If we get here, the model is saying "GOOD_TO_GO: NO". We should raise an
+    # error with the model's explanation of why not, which should be in the text
+    # after "GOOD_TO_GO: NO".
+    if "GOOD_TO_GO: NO" not in sample_result.text:
+        raise ValueError(
+            "When we asked the model to sanity-check whether or not we have enough "
+            "information to proceed with writing a workflow, "
+            "it gave us neither a clear YES nor a clear NO."
+        )
+
+    good_to_go_split = sample_result.text.split("GOOD_TO_GO: NO", 1)
+    explanation = (
+        good_to_go_split[1].strip()
+        if len(good_to_go_split) > 1
+        else (
+            "When we asked the model to sanity-check whether or not we have enough information "
+            "to proceed with writing a workflow, it said NO but did not provide an explanation."
+        )
+    )
+    raise ValueError(
+        "When we asked the model to sanity-check whether or not we have enough information to "
+        "proceed with writing a workflow, it said NO. Explanation: "
+        f"{explanation}"
+    )
+
+
 async def _write_implementation_for_stub(
     ctx: fastmcp.Context,
     stubname: str,
@@ -447,7 +756,7 @@ async def _write_implementation_for_stub(
 ) -> str:
     """Replace the given stub function with a real implementation."""
     logger = logging.getLogger(__name__)
-    convo = json.loads(json.dumps(convo))  # Deep-copy to ensure immutability.
+    convo = json.loads(json.dumps(convo))  # Deep-copy to ensure mutability.
 
     logger.debug("Asking model to implement stub function %s", stubname)
 
@@ -597,7 +906,7 @@ async def _replace_all_stubs_with_implementations(
 ):
     """Find any stub functions in the given code, and replace them with real implementations."""
     logger = logging.getLogger(__name__)
-    convo = json.loads(json.dumps(convo))  # Deep-copy to ensure immutability.
+    convo = json.loads(json.dumps(convo))  # Deep-copy to ensure mutability.
 
     await ctx.info(
         "Wiring the workflow's non-procedural portions back into LLM calls..."
@@ -673,158 +982,6 @@ async def _execute_workflow_code(
     )
     logger.info("Workflow execution complete.")
     return result
-
-
-async def _explore_data(
-    ctx: fastmcp.Context,
-    convo: list[str],
-) -> str:
-    """Explore the given data sources. Return a report containing observations
-    about the data, as well as a sample of records from each data source."""
-
-    convo = json.loads(json.dumps(convo))  # Deep-copy to ensure immutability.
-
-    report = ""
-
-    system_prompt = """
-You're an AI agent that's been assigned a task. The task involves working with some data sources.
-You are just beginning to work on the task. The first step of any such endeavor is
-data exploration. You need to get a good understanding of the data you'll be working with.
-
-You'll eventually have to write Python code that performs a workflow involving this data,
-and in order to do that, you need to understand the data's shape and structure, as well as any
-quirks or gotchas or anomalies it might have. Your job at the moment is *not* to actually
-perform the requested task. Your job is to explore the data and understand it well enough
-that you could write code to process it later.
-
-You're running in a Python 3.11 Docker container. You have access to standard Python file I/O,
-so you can read files from the filesystem if you need to. The Docker container is sandboxed,
-but you can access files through the a shared mount at `/workspace`. Using Python, you should
-be able to do everything you need, including listing folder contents, reading files, parsing
-files, and so on.
-
-The end result of your data exploration will be a report. This report will enumerate the
-data source (or sources) that the workflow will access. For each data source, the report will
-describe in exact detail how to access it, what format it's in, how to parse it or read it
-or iterate it, and any potential irregularities in the data. The report will also include
-samples of records from each data source, which can serve as a reference when you later
-write code to process the data.
-
-Our conversation will occur in stages. First, I'll show you all the information I have about
-the task, the data sources, etc.
-Then, we'll enter a loop. Each iteration of the loop will go like this:
-STAGE 1: REPORT PRESENTATION. I'll show you the report in its current state.
-STAGE 2: DELIBERATION. I'll ask you to perform a chain-of-thought reasoning process on your
-    current understanding of the data. This stage is purely for your own benefit, so that
-    you can square your thoughts and decide on what to do next.
-STAGE 3: ACTION SELECTION. I'll ask you to choose one of the following actions:
-    - AMEND_REPORT: Write an amendment to the report. This is your sole means of authoring
-        the final report. You can write as many amendments as you want, and they will be
-        combined together to form the final report. Each amendment should be a standalone
-        chunk of text that can be added to the report to improve it in some way. For example,
-        if you notice that a certain data source has some irregularities, you might write an
-        amendment describing those irregularities and how to handle them. The report 
-        grows monotonically. You may not delete or modify previous amendments; you can only
-        add new ones. If you need to change something you wrote in a previous amendment,
-        then write a new amendment describing the new knowledge or correction, and explicitly
-        call out the fact that this is a correction to a previous amendment.
-    - WRITE_CODE: Write a block of Python code that processes the data in some way. This is your
-        means of performing "hands-on" exploration of the data. You can write code to read
-        the data, to compute statistics about it, to visualize it, or to do anything else that
-        might help you understand it better. You can write as many code blocks as you want,
-        and they can be as long or as short as you want. Each code block should be a standalone
-        chunk of Python code that can be executed independently. When you write a code block, I
-        will execute it in a Python environment and show you the results. This can be a very
-        powerful tool for understanding the data, so use it often and creatively!
-    - FINISH: Declare that you're finished with data exploration, and that the report is complete.
-        This action ends the loop.
-
-I might abridge portions of our conversation for the sake of brevity, so you won't necessarily
-see every single stage of every single iteration of the loop. But don't worry about that.
-Just focus on doing a good job of writing a comprehensive and accurate report.
-"""
-
-    convo_base: list[str] = json.loads(json.dumps(convo))
-
-    while True:
-        convo = json.loads(json.dumps(convo_base))
-
-        if report:
-            convo.append(
-                "STAGE 1: REPORT PRESENTATION. "
-                "Here is the report as it currently stands:\n\n---\n\n" + report
-            )
-        else:
-            convo.append(
-                "STAGE 1: REPORT PRESENTATION. "
-                "The report is currently blank, because we haven't done any exploration yet."
-            )
-
-        convo.append("""
-STAGE 2: DELIBERATION. 
-Take some time to think through your current understanding of the data.
-Discuss the following topics with yourself.
-- What you know about the data so far, based on the information you've been given and any
-    exploration you've done up to this point.
-- What you still need to learn about the data.
-- What's captured so far in the report, and whether it's accurate and comprehensive.
-- What still needs to be added to the report, and how you'll go about learning that information.
-I don't need you to decide on an action or to write any code just yet.
-Just talk through your thoughts.
-""")
-        s_deliberation = await ctx.sample(
-            messages=convo,
-            system_prompt=system_prompt,
-            max_tokens=20_000,
-        )
-        if not s_deliberation.text:
-            raise ValueError(
-                "LLM returned no text in response to the data exploration deliberation prompt."
-            )
-        await ctx.info("Data exploration deliberation:\n" + s_deliberation.text)
-
-        convo.append("===\nASSISTANT REPLIED\n===\n\n" + s_deliberation.text)
-        convo_base.append("===\nASSISTANT REPLIED\n===\n\n" + s_deliberation.text)
-
-        convo.append("""
-STAGE 3: ACTION SELECTION.
-What would you like to do next? Talk it over with yourself, and then choose one of the 
-following actions:
-- AMEND_REPORT: Write an amendment to the report.
-- WRITE_CODE: Write a block of Python code that processes the data in some way.
-- FINISH: Declare that you're finished with data exploration, and that the report is complete.
-When you've decided on an option, write the words `ACTION_SELECTED: <chosen action>`,
-where <chosen action> is one of the three options listed above. Make sure that
-`ACTION_SELECTED: <chosen action>` on its own line, and is written in all caps, e.g.:
-ACTION_SELECTED: AMEND_REPORT
-
-If you chose WRITE_CODE, then after writing `ACTION_SELECTED: WRITE_CODE`, also write a block
-of Python code enclosed in triple backticks labeled "```python". I will execute this code
-and show you what it prints to stdout. (I may truncate the output if it exceeds 50,000
-characters in length.)
-
-If you chose AMEND_REPORT, then after writing `ACTION_SELECTED: AMEND_REPORT`, also write a
-text block enclosed in triple backticks labeled "```reportamendment". This block should contain
-the text of your amendment to the report. I will copy-paste this onto the end of the report,
-so it should be written in a way that makes sense as an addition to the existing report.
-""")
-
-        s_action = await ctx.sample(
-            messages=convo,
-            system_prompt=system_prompt,
-            max_tokens=20_000,
-        )
-        if not s_action.text:
-            raise ValueError(
-                "LLM returned no text in response to the data exploration action prompt."
-            )
-        await ctx.info("Data exploration action:\n" + s_action.text)
-
-        return ""
-
-        pass
-
-    return report
 
 
 @mcp.tool(
@@ -914,17 +1071,49 @@ async def ruc_execute_semantic_code_workflow(
     code, replaces semantic stubs with structured LLM-call implementations, and
     runs the resulting workflow against loaded records.
 
-    NOTE: Planned future expansions can include caches of code for frequently
-    requested workflows.
-
     Returns a status payload containing execution notes and a `result` field.
     """
     logger = logging.getLogger(__name__)
     logger.info("execute_semantic_code_workflow started for task: %s", task_description)
     start_time = time.time()
 
-    # Build the basic conversational context for the workflow execution. This will be fed
-    # into the LLM as part of the prompt, and will serve as the definition of this task.
+    # First step: Examine the data
+
+    # First step: load the data from the indicated sources, if any.
+    data_source_records = {}
+    execution_notes = ""
+    data_source_uris = data_source_uris or []
+
+    progress_message_loading_data_sources = (
+        f"Loading {len(data_source_uris)} data sources"
+        if len(data_source_uris) > 1
+        else (
+            "Loading data source"
+            if len(data_source_uris) == 1
+            else "No data sources to load"
+        )
+    )
+    await ctx.report_progress(
+        progress=0,
+        total=None,
+        message=progress_message_loading_data_sources,
+    )
+
+    for data_source_uri in data_source_uris:
+        try:
+            data_source_records[data_source_uri] = await _load_data_from_uri(
+                ctx,
+                data_source_uri,
+            )
+        except Exception as e:
+            note = f"Failed to load data source {data_source_uri}: {e}"
+            logger.warning(note)
+            execution_notes += f"{note}\n\n"
+
+    data_previews = _construct_data_source_previews(data_source_records)
+
+    # Build the basic conversational context for the workflow execution. This will be fed into the LLM
+    # as part of the prompt, and will serve as the definition of this task.
 
     convo = [f"TASK:\n\n{task_description}"]
 
@@ -943,38 +1132,29 @@ async def ruc_execute_semantic_code_workflow(
             "\n\n" + "\n\n".join(f"- {req}" for req in behavioral_requirements)
         )
 
-    if data_sources:
-        convo.append(
-            "Here are the data sources that you should rely on for this task:"
-            "\n\n" + data_sources
-        )
-
     if how_to_present_output:
         convo.append(
             "INSTRUCTIONS FOR HOW TO PRESENT YOUR OUTPUT: "
             "\n\n" + how_to_present_output
         )
 
-    # First perform data exploration (assuming we have data to explore.)
-    if data_sources:
+    if data_previews and len(data_previews) > 0:
         convo.append(
-            "Here are the data sources that you should rely on for this task:"
-            "\n\n" + data_sources
+            f"I'll now, over the next few messages, show you {len(data_previews)} data sources, "
+            "which the task presumably expects you to rely on. I'll show you a truncated "
+            "preview of the contents of each data source, to help you understand what kind of "
+            "data you're working with."
         )
-
-        await ctx.report_progress(
-            progress=0,
-            total=None,
-            message="Data exploration in progress",
+        for preview in data_previews:
+            convo.append(preview)
+    else:
+        convo.append(
+            "No external data sources were provided, so you'll have to rely entirely on the task "
+            "description and context explanation to understand what this task is asking you "
+            "to do. If that's impossible, i.e. if the task is inherently asking you to operate "
+            "on some data and that data is missing, then that's almost certainly an error on the "
+            "part of either the end user or the AI agent that dispatched you."
         )
-
-        data_exploration_report = await _explore_data(ctx, convo)
-        logger.info("Data exploration complete. Report:\n%s", data_exploration_report)
-        return {
-            "status": "unfinished",
-            "message": "Data exploration complete. Workflow execution not implemented yet.",
-            "data_exploration_report": data_exploration_report,
-        }
 
     try:
         await _is_ready_for_workflow(ctx, convo)
