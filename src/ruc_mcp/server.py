@@ -318,6 +318,86 @@ def _extract_labeled_code_block(response_text: str, label: str) -> str:
     )
 
 
+def _delete_python_function_from_code(
+    pycode: str,
+    function_name: str,
+) -> str:
+    """Delete the function with the given name from the given Python code."""
+    # We are *not* going to be clever and "Pythonic" about this.
+    # We will use extremely simple iterative line examination using basic string matching.
+    # We will not use regexes.
+    pycode_lines = pycode.splitlines()
+
+    # Find the index of the line that starts with either "def function_name(" or "async def function_name(".
+    function_def_index = None
+    for i, line in enumerate(pycode_lines):
+        stripped_line = line.strip()
+        if stripped_line.startswith(
+            f"def {function_name}("
+        ) or stripped_line.startswith(f"async def {function_name}("):
+            function_def_index = i
+            break
+
+    if function_def_index is None:
+        raise ValueError(f"Function {function_name} not found in code.")
+
+    # Find the end of the function by looking for the next line that is not indented.
+    function_end_index = function_def_index + 1
+    while function_end_index < len(pycode_lines):
+        if pycode_lines[function_end_index].strip() == "":
+            # Blank lines are fine, even if they're not indented. Just skip over them.
+            function_end_index += 1
+            continue
+        if not pycode_lines[function_end_index].startswith((" ", "\t")):
+            # This line is not indented, which means it's outside the function.
+            # We've found the end of the function.
+            break
+        function_end_index += 1
+
+    # We also want to delete the comment above the function definition,
+    # if there is one and if it's not separated by a blank line.
+    # This is to ensure that we delete any TODO comments that might be attached to the function.
+    comment_index = function_def_index - 1
+    while comment_index >= 0:
+        if pycode_lines[comment_index].strip() == "":
+            # We've reached a blank line, so we should stop looking for comments.
+            break
+        if pycode_lines[comment_index].strip().startswith("#"):
+            # This is a comment line, so we should include it in the deletion.
+            comment_index -= 1
+        else:
+            # This is not a comment line, so we should stop looking for comments.
+            break
+
+    # Delete the function lines.
+    new_code_lines = (
+        pycode_lines[: comment_index + 1] + pycode_lines[function_end_index:]
+    )
+    return "\n".join(new_code_lines)
+
+
+def _delete_all_functions_with_designated_marker(
+    pycode: str,
+    marker: str,
+) -> str:
+    """Deletes all functions whose name is somethingsomething_<marker>."""
+    # This regex works as follows:
+    # - "def " matches the literal string "def ".
+    # - "\w+" matches one or more word characters (i.e. the function name before the marker).
+    # - "_{marker}" matches the literal string "_<marker>".
+    # - "\s*\(" matches zero or more whitespace characters followed by an opening parenthesis.
+    pattern = rf"def \w+_{re.escape(marker)}\s*\("
+    function_names = re.findall(pattern, pycode)
+
+    for function_name in function_names:
+        # Extract the actual function name from the match.
+        match = re.match(r"def (\w+)\s*\(", function_name)
+        if match:
+            actual_function_name = match.group(1)
+            pycode = _delete_python_function_from_code(pycode, actual_function_name)
+    return pycode
+
+
 async def _write_workflow(ctx: fastmcp.Context, convo: list[str]) -> dict[str, str]:
     """Write a Python function that performs a procedural workflow that includes
     "fuzzy" operations."""
@@ -1152,6 +1232,7 @@ async def ruc_execute_semantic_code_workflow(
     )
 
     pycode = await _replace_all_stubs_with_implementations(ctx, pycode, convo)
+    pycode = _delete_all_functions_with_designated_marker(pycode, "obsolete_stub")
 
     # For now, just log the generated code and return a placeholder response, since the main point
     # of this POC is to demonstrate the code generation aspect of RUC. The production version of
@@ -1168,6 +1249,13 @@ async def ruc_execute_semantic_code_workflow(
         runresult = await _execute_workflow_code(ctx, pycode)
         elapsed_seconds = int(time.time() - start_time)
         await ctx.info(f"Workflow execution complete after {elapsed_seconds} seconds.")
+
+        # TODO: In the future, we'd like to add some code editing or bug-fixing capabilities here,
+        # so that if the workflow execution fails due to an error in the generated code, the model
+        # can attempt to fix the code and re-run it, without us having to go back to square one with
+        # the entire workflow generation process. However, we need to be very careful about how
+        # we splice code repairs into the original code, because we don't want to accidentally
+        # mess up the structure of the code.
     except Exception as e:
         logger.error(
             f"Workflow execution failed: {e}",
