@@ -1267,16 +1267,23 @@ async def ruc_execute_semantic_code_workflow(
     pycode = await _replace_all_stubs_with_implementations(ctx, pycode, convo)
     pycode = _delete_all_functions_with_designated_marker(pycode, "obsolete_stub")
 
-    # For now, just log the generated code and return a placeholder response, since the main point
-    # of this POC is to demonstrate the code generation aspect of RUC. The production version of
-    # this function will need to execute the generated code in a sandboxed environment and return
-    # the actual results of that execution.
+    execution_notes = "\n\n"
 
     # DEBUG: Save pycode to a local file, so we can inspect it if anything goes wrong during
     # execution.
     if write_execution_workflow_file:
-        with open(write_execution_workflow_file, "w", encoding="utf-8") as f:
-            f.write(pycode)
+        try:
+            with open(write_execution_workflow_file, "w", encoding="utf-8") as f:
+                f.write(pycode)
+            execution_notes += f"Generated workflow code was written to file: {write_execution_workflow_file}\n\n"
+        except Exception as e:
+            await ctx.error(
+                f"Failed to write generated workflow code to file {write_execution_workflow_file}: {e}",
+            )
+            execution_notes += (
+                f"Warning: Failed to write generated workflow code to file: "
+                f"{write_execution_workflow_file}\n\n"
+            )
 
     try:
         runresult = await _execute_workflow_code(ctx, pycode)
@@ -1300,6 +1307,7 @@ async def ruc_execute_semantic_code_workflow(
             "status": "error",
             "execution_time_seconds": int(time.time() - start_time),
             "implementation_strategy": implementation_strategy,
+            "execution_notes": execution_notes.strip(),
             "message": f"Workflow execution failed.",
             "details": str(e),
         }
@@ -1321,6 +1329,7 @@ async def ruc_execute_semantic_code_workflow(
         "status": "success",
         "execution_time_seconds": elapsed_seconds,
         "implementation_strategy": implementation_strategy,
+        "execution_notes": execution_notes.strip(),
         "result": runresult,
     }
 
