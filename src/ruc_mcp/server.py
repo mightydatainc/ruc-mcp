@@ -330,7 +330,53 @@ async def _write_workflow(ctx: fastmcp.Context, convo: list[str]) -> dict[str, s
 
     convo = json.loads(json.dumps(convo))  # Deep-copy to ensure immutability.
 
-    # TODO: Ask the LLM if it's ready to go.
+    # Sidebar: sanity-check first.
+    convo_sanity = json.loads(json.dumps(convo))  # Deep-copy for immutability.
+    convo_sanity.append("""
+Before we begin, let's perform a sanity-check to make sure that we are able to proceed.
+Do you have enough information and guidance to start writing code for the workflow?
+Is there anything else you need, that's stopping you from proceeding?
+                 
+This is your chance to early-out if you feel like you don't have enough to go on.
+                 
+Discuss the issue with yourself. Apply chain-of-thought reasoning to analyze whether
+you should abort before we get started. Aborting is not desirable, but if you simply
+can't perform the task with the information and resources at your disposal, then
+now is the time to say so.
+                 
+When you're done with your deliberation, provide your final determination by emitting,
+by itself, on its own line, either "READY TO PROCEED", or else 
+"ABORT: reason for aborting goes here". This should be the last thing you say.
+I will look for this exact line and use it to decide whether to proceed or not.
+""")
+    sanity_check_result = await ctx.sample(
+        messages=convo_sanity,
+        system_prompt=RUC_FUNCTION_WRITING_SYSTEM_PROMPT,
+        max_tokens=10_000,
+    )
+    sanity_check_text = sanity_check_result.text
+    if not sanity_check_text:
+        raise ValueError(
+            "Sampling returned no text when trying to perform the initial sanity check."
+        )
+
+    if "ABORT:" in sanity_check_text:
+        abort_reason = sanity_check_text.split("ABORT:", 1)[1].strip()
+        if abort_reason.endswith('"'):
+            # Damn thing included the quotes.
+            abort_reason = abort_reason[:-1].strip()
+        # If there are newlines, split on newlines and keep only the first line.
+        if "\n" in abort_reason:
+            abort_reason = abort_reason.split("\n", 1)[0].strip()
+        raise ValueError(f"Cannot proceed. Reason: {abort_reason}")
+
+    if "READY TO PROCEED" not in sanity_check_text:
+        await ctx.warning(
+            "Model did not explicitly say 'READY TO PROCEED' in response to the sanity check. "
+            "Here's what it said instead: " + sanity_check_text
+        )
+
+    # Sanity check complete. We can proceed with writing the workflow code.
 
     convo.append("""
 You now have everything you need (or at least, everything I can give you)
@@ -1074,6 +1120,19 @@ async def ruc_execute_semantic_code_workflow(
             "message": f"Workflow execution failed.",
             "details": str(e),
         }
+
+    # Report time elapsed in the format "00h04m36s".
+    # Hours can be any number of digits, but minutes and seconds should
+    # always be two digits (e.g. "00h04m36s", not "00h4m36s").
+    hours, remainder = divmod(elapsed_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    time_elapsed_pretty_msg = f"{hours:02d}h{minutes:02d}m{seconds:02d}s"
+
+    await ctx.report_progress(
+        progress=1,
+        total=1,
+        message=f"Done after {time_elapsed_pretty_msg}",
+    )
 
     retval = {
         "status": "success",
