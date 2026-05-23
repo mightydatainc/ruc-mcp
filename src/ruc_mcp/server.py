@@ -1270,7 +1270,7 @@ feel the workflow code is beyond repair.
     new_pycode = _replace_python_function_in_code(
         pycode,
         function_name,
-        new_function_code,
+        new_function_code + "\n\n",
     )
     return new_pycode
 
