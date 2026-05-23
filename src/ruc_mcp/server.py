@@ -324,6 +324,15 @@ def _delete_python_function_from_code(
     function_name: str,
 ) -> str:
     """Delete the function with the given name from the given Python code."""
+    return _replace_python_function_in_code(pycode, function_name, "")
+
+
+def _replace_python_function_in_code(
+    pycode: str,
+    function_name: str,
+    new_function_code: str,
+) -> str:
+    """Replace the function with the given name in the given Python code with new code."""
     # We are *not* going to be clever and "Pythonic" about this.
     # We will use extremely simple iterative line examination using basic string matching.
     # We will not use regexes.
@@ -371,10 +380,13 @@ def _delete_python_function_from_code(
             break
 
     # Delete the function lines.
-    new_code_lines = (
-        pycode_lines[: comment_index + 1] + pycode_lines[function_end_index:]
+    code_before_function = "\n".join(pycode_lines[: comment_index + 1])
+    code_after_function = "\n".join(pycode_lines[function_end_index:])
+
+    new_pycode = (
+        code_before_function + "\n" + new_function_code + "\n" + code_after_function
     )
-    return "\n".join(new_code_lines)
+    return new_pycode
 
 
 def _delete_all_functions_with_designated_marker(
@@ -767,13 +779,6 @@ async def _execute_workflow_code(
     pycode: str,
 ) -> Any:
     """Execute the given workflow code and return the result."""
-    logger = logging.getLogger(__name__)
-    await ctx.report_progress(
-        progress=0,
-        total=None,
-        message="Executing workflow.",
-    )
-
     namespace: dict[str, Any] = {
         "__name__": "ruc_generated_workflow",
         "__package__": None,
@@ -792,7 +797,6 @@ async def _execute_workflow_code(
         if inspect.isawaitable(workflow_result)
         else workflow_result
     )
-    logger.info("Workflow execution complete.")
     return result
 
 
@@ -1075,6 +1079,165 @@ Emit your reply as a line that starts with "STATUS:", followed by your status up
             )
 
 
+async def _repair_workflow_code(
+    ctx: fastmcp.Context,
+    pycode: str,
+    errormessage: str,
+) -> str:
+    """If the workflow code produces an error, ask the model to debug it and fix any issues."""
+    system_prompt = f"""
+You're helping to fix an error in a Python script. The script was written to solve a one-off
+request for a task that required interopration between LLM calls and traditional procedural code.
+
+The code was invoked as an MCP server. It runs inside a Docker container built from a
+python:3.12-slim image, with a few science and data libraries installed
+(numpy, pandas, scipy, scikit-learn, and statsmodels).
+
+The user will show you the code itself, and will then show you the error that caused the code
+to break.
+
+Your job will be to make as minimal a change as possible to the function that the error occurred
+in, in order to resolve the error. We don't want you to change the intended behavior of the code.
+We just want you to make it not crash.
+
+EDITOR CONSTRAINTS
+I don't want you to rewrite the entire file. That's too much work, and raises the risk of error
+too high. Likewise, I don't want you to just apply a standalone diff or patch, because, again,
+there's too much risk of error -- getting line numbers wrong, getting indentation wrong, etc.
+
+Therefore, the granularity of your edit will be to determine which function in the root namespace
+(i.e. whose definition has no indentation) the error occurred in. You will then rewrite that
+function, and *only* that function. Your rewrite will be nearly identical to the function's
+current form, with the only changes being the ones that are necessary in order to fix the error.
+"""
+    convo: list[str] = []
+    convo.append(f"""
+```python
+{pycode}
+```
+""")
+    convo.append(f"""
+```error
+{errormessage}
+```
+""")
+    convo.append(
+        "What exactly went wrong? "
+        "Where did it go wrong? "
+        "What function needs to be edited in order to fix it? "
+        "\n\n"
+        "Don't actually write the patch yet. "
+        "Just discuss and deliberate the matter first. "
+        "I want to hear your thoughts before we proceed."
+    )
+    s_deliberation = await ctx.sample(
+        messages=convo,
+        system_prompt=system_prompt,
+        max_tokens=20_000,
+    )
+    if not s_deliberation.text:
+        raise ValueError(
+            "LLM returned no text in response to the workflow code repair deliberation prompt."
+        )
+    convo.append("===\nASSISTANT REPLIED\n===\n\n" + s_deliberation.text)
+
+    convo_status: list[str] = json.loads(json.dumps(convo))
+    convo_status.append("""
+Before we proceed with the actual edit, write a status blurb that can be pasted into a progress bar
+to explain what this problem is all about. This blurb should be a sentence fragment, extremely
+concise but as specific as possible. Examples:
+STATUS: Syntax error in function that imputes missing sales values
+STATUS: KeyError in function that aggregates customer data by region
+STATUS: Malformed regex in logfile parser
+You get the idea.
+
+Emit your reply as a line that starts with "STATUS:", followed by your status update.
+""")
+    s_status = await ctx.sample(
+        messages=convo_status,
+        system_prompt=system_prompt,
+        max_tokens=1000,
+    )
+    if not s_status.text:
+        await ctx.warning(
+            "LLM returned no text in response to the workflow code repair status update prompt. "
+        )
+    else:
+        status_text = s_status.text.strip()
+        if "STATUS:" in status_text:
+            status_text = status_text.split("STATUS:", 1)[1].strip()
+        if "\n" in status_text:
+            status_text = status_text.split("\n", 1)[0].strip()
+        await ctx.report_progress(
+            progress=0,
+            total=None,
+            message=status_text,
+        )
+
+    convo.append("""
+Let's pause for a sanity check. Can this problem indeed be fixed?
+Or is the code so mangled and distorted from previous edit attempts
+as to be basically irreparable at this point?
+
+Think about the matter for a minute. I'd like to hear your thoughts.
+
+When you're ready, emit one of two conclusion patterns.
+
+-EITHER-
+
+Say, on its own line, just like this:
+FUNCTION TO EDIT: function_name
+followed by a triple-backticked block labeled "```python".
+In that Python block, provide a complete rewrite of the fuction you've specified,
+including its definition. Your rewrite should be as identical to the original as
+possible, while still fixing the error.
+
+-OR-
+
+Say, on its own line, just like this:
+IRREPARABLE: Lorem ipsum dolor logit...
+Except, of course, replace the lorem ipsum text with an explanation of why you
+feel the workflow code is beyond repair.
+""")
+    s_conclusion = await ctx.sample(
+        messages=convo,
+        system_prompt=system_prompt,
+        max_tokens=20_000,
+    )
+    if not s_conclusion.text:
+        raise ValueError(
+            "LLM returned no text in response to the workflow code repair conclusion prompt."
+        )
+    convo.append("===\nASSISTANT REPLIED\n===\n\n" + s_conclusion.text)
+
+    if "IRREPARABLE:" in s_conclusion.text:
+        explanation = s_conclusion.text.split("IRREPARABLE:", 1)[1].strip()
+        raise ValueError(f"The workflow code is broken beyond repair. {explanation}")
+
+    if not "FUNCTION TO EDIT:" in s_conclusion.text:
+        raise ValueError(
+            "LLM did not provide a valid conclusion in response to the "
+            "workflow code repair conclusion prompt. "
+            "Here's what it said:\n" + s_conclusion.text
+        )
+
+    function_name = (
+        s_conclusion.text.split("FUNCTION TO EDIT:", 1)[1].split("\n", 1)[0].strip()
+    )
+    new_function_code = _extract_labeled_code_block(s_conclusion.text, "python")
+    if not new_function_code:
+        raise ValueError(
+            "Failed to extract a Python code block from the LLM's response "
+            "when we asked it to provide a repaired function."
+        )
+    new_pycode = _replace_python_function_in_code(
+        pycode,
+        function_name,
+        new_function_code,
+    )
+    return new_pycode
+
+
 @mcp.tool(
     description=(
         "Perform a task that mixes deterministic procedural work (primarily the "
@@ -1271,6 +1434,24 @@ async def ruc_execute_semantic_code_workflow(
     pycode = await _replace_all_stubs_with_implementations(ctx, pycode, convo)
     pycode = _delete_all_functions_with_designated_marker(pycode, "obsolete_stub")
 
+    # --------------------------------
+    # DELIBERATELY INTRODUCE AN ERROR SO THAT WE CAN TEST OUR ERROR HANDLING CODE.
+    # TODO DEBUG DELETE THIS LATER.
+    # Find the string "async def execute_workflow".
+    # Then, *after* that string, find the first occurrence of the word "return",
+    # and replace it with "returnt" (a misspelling of "return" that will cause a syntax error when we try to execute the code).
+    # This simulates a situation where the LLM made a mistake in its code generation.
+    workflow_function_def_position = pycode.find("async def execute_workflow")
+    if workflow_function_def_position != -1:
+        return_position = pycode.find("return", workflow_function_def_position)
+        if return_position != -1:
+            pycode = (
+                pycode[:return_position]
+                + "returnt"
+                + pycode[return_position + len("return") :]
+            )
+    # -----------------------------------
+
     execution_notes = "\n\n"
 
     # DEBUG: Save pycode to a local file, so we can inspect it if anything goes wrong during
@@ -1289,32 +1470,41 @@ async def ruc_execute_semantic_code_workflow(
                 f"{write_execution_workflow_file}\n\n"
             )
 
-    try:
-        runresult = await _execute_workflow_code(ctx, pycode)
-        elapsed_seconds = int(time.time() - start_time)
-        await ctx.info(f"Workflow execution complete after {elapsed_seconds} seconds.")
-
-        # TODO: In the future, we'd like to add some code editing or bug-fixing capabilities here,
-        # so that if the workflow execution fails due to an error in the generated code, the model
-        # can attempt to fix the code and re-run it, without us having to go back to square one
-        # with the entire workflow generation process. However, we need to be very careful about
-        # how we splice code repairs into the original code, because we don't want to accidentally
-        # mess up the structure of the code.
-        # NOTE: When we edit/revise the pycode, remember to also update the file that we save for
-        # debugging purposes, so that it reflects the actual code that gets executed.
-    except Exception as e:
-        logger.error(
-            f"Workflow execution failed: {e}",
-            exc_info=True,
+    while True:
+        await ctx.report_progress(
+            progress=0,
+            total=None,
+            message="Executing workflow.",
         )
-        return {
-            "status": "error",
-            "execution_time_seconds": int(time.time() - start_time),
-            "implementation_strategy": implementation_strategy,
-            "execution_notes": execution_notes.strip(),
-            "message": f"Workflow execution failed.",
-            "details": str(e),
-        }
+
+        workflow_error = None
+        try:
+            runresult = await _execute_workflow_code(ctx, pycode)
+            break  # If execution is successful, break out of the loop and return the result.
+
+            # TODO: In the future, we'd like to add some code editing or bug-fixing capabilities here,
+            # so that if the workflow execution fails due to an error in the generated code, the model
+            # can attempt to fix the code and re-run it, without us having to go back to square one
+            # with the entire workflow generation process. However, we need to be very careful about
+            # how we splice code repairs into the original code, because we don't want to accidentally
+            # mess up the structure of the code.
+            # NOTE: When we edit/revise the pycode, remember to also update the file that we save for
+            # debugging purposes, so that it reflects the actual code that gets executed.
+        except Exception as e:
+            logger.error(
+                f"Workflow execution failed: {e}",
+                exc_info=True,
+            )
+            workflow_error = e
+
+        await ctx.report_progress(
+            progress=0,
+            total=None,
+            message=f"Workflow crashed. Repairing and retrying.",
+        )
+        pycode = await _repair_workflow_code(ctx, pycode, str(workflow_error))
+
+    elapsed_seconds = int(time.time() - start_time)
 
     # Report time elapsed in the format "00h04m36s".
     # Hours can be any number of digits, but minutes and seconds should
