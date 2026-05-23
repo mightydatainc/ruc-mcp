@@ -63,7 +63,7 @@ In today's work session, you'll write a Python function called `execute_workflow
 It will adhere to the following calling convention and structure:
 
 ```python
-async def execute_workflow(data_source_records: dict[str, list[Any]], ctx: fastmcp.Context) -> dict:
+async def execute_workflow(ctx: fastmcp.Context) -> dict:
     # TODO: Implement the task here
     # ...
     return retval # "retval" is some JSON-serializable dict or list.
@@ -638,7 +638,6 @@ async def _replace_all_stubs_with_implementations(
 async def _execute_workflow_code(
     ctx: fastmcp.Context,
     pycode: str,
-    data_source_records: dict[str, Any],
 ) -> Any:
     """Execute the given workflow code and return the result."""
     logger = logging.getLogger(__name__)
@@ -657,15 +656,10 @@ async def _execute_workflow_code(
     execute_workflow = namespace.get("execute_workflow")
     if not callable(execute_workflow):
         raise ValueError(
-            "Generated code did not define callable execute_workflow(data_source_records, ctx)."
+            "Generated code did not define callable execute_workflow(ctx)."
         )
 
-    # The function execute_workflow takes an argument called "data_source_records".
-    # Pass it in.
-    workflow_result = execute_workflow(
-        data_source_records=data_source_records,
-        ctx=ctx,
-    )
+    workflow_result = execute_workflow(ctx=ctx)
     result = (
         await cast(Any, workflow_result)
         if inspect.isawaitable(workflow_result)
@@ -701,7 +695,7 @@ You're running in a Python 3.11 Docker container. You have access to standard Py
 so you can read files from the filesystem if you need to. The Docker container is sandboxed,
 but you can access files through the a shared mount at `/workspace`. Using Python, you should
 be able to do everything you need, including listing folder contents, reading files, parsing
-files, and so on.
+files, and so on. (You do, of course, have to import the corresponding libraries first.)
 
 The end result of your data exploration will be a report. This report will enumerate the
 data source (or sources) that the workflow will access. For each data source, the report will
@@ -781,7 +775,6 @@ Just talk through your thoughts.
             raise ValueError(
                 "LLM returned no text in response to the data exploration deliberation prompt."
             )
-        await ctx.info("Data exploration deliberation:\n" + s_deliberation.text)
 
         convo.append("===\nASSISTANT REPLIED\n===\n\n" + s_deliberation.text)
         convo_base.append("===\nASSISTANT REPLIED\n===\n\n" + s_deliberation.text)
@@ -799,9 +792,17 @@ where <chosen action> is one of the three options listed above. Make sure that
 ACTION_SELECTED: AMEND_REPORT
 
 If you chose WRITE_CODE, then after writing `ACTION_SELECTED: WRITE_CODE`, also write a block
-of Python code enclosed in triple backticks labeled "```python". I will execute this code
-and show you what it prints to stdout. (I may truncate the output if it exceeds 50,000
-characters in length.)
+of Python code enclosed in triple backticks labeled "```python". IMPORTANT: DO NOT PRINT TO
+STDOUT IN THIS CODE BLOCK. Instead, append your output to a string variable called
+`data_exploration_log`. This variable will be initialized as an empty string at the beginning
+of your code block. I will execute your code block in a Python environment and then show you
+the contents of `data_exploration_log`. This is how you should produce output from your
+code block, since you won't have access to standard output when your code block is executed.
+Try to write your code defensively -- be mindful of things like looping over contents of files
+when you don't know their length, and so on. You don't want to accidentally write an infinite
+loop that appends to `data_exploration_log`, or getting stuck on a locked resource or something.
+Remember, you don't have to actually *do* the requested workflow task yet -- you're just
+exploring for now.
 
 If you chose AMEND_REPORT, then after writing `ACTION_SELECTED: AMEND_REPORT`, also write a
 text block enclosed in triple backticks labeled "```reportamendment". This block should contain
@@ -815,16 +816,71 @@ so it should be written in a way that makes sense as an addition to the existing
             max_tokens=20_000,
         )
         if not s_action.text:
-            raise ValueError(
-                "LLM returned no text in response to the data exploration action prompt."
+            await ctx.warning(
+                "LLM returned no text in response to the data exploration action selection prompt. "
+                "I'll just prompt it again and hope for a better result this time."
             )
-        await ctx.info("Data exploration action:\n" + s_action.text)
+            continue
 
-        return ""
+        if "ACTION_SELECTED: FINISH" in s_action.text:
+            return report
 
-        pass
+        elif "ACTION_SELECTED: AMEND_REPORT" in s_action.text:
+            amendment = _extract_labeled_code_block(s_action.text, "reportamendment")
+            if not amendment:
+                await ctx.warning(
+                    "LLM indicated that it wanted to amend the report, "
+                    "but did not include a report amendment block."
+                )
+                continue
+            report += "\n\n" + amendment.strip()
 
-    return report
+        elif "ACTION_SELECTED: WRITE_CODE" in s_action.text:
+            code = _extract_labeled_code_block(s_action.text, "python")
+            if not code:
+                await ctx.warning(
+                    "LLM indicated that it wanted to write code, "
+                    "but did not include a Python code block."
+                )
+                continue
+
+            code = 'data_exploration_log = ""\n\n' + code.strip()
+
+            # Execute the code and capture its output.
+            local_namespace: dict[str, Any] = {}
+
+            try:
+                exec(code, {}, local_namespace)
+                if "data_exploration_log" not in local_namespace:
+                    raise ValueError(
+                        "The Python code block that the LLM provided did not define "
+                        "a variable called `data_exploration_log`."
+                    )
+                s_data_exploration_log = local_namespace["data_exploration_log"]
+                result_str = (
+                    json.dumps(s_data_exploration_log, indent=2)
+                    if not isinstance(s_data_exploration_log, str)
+                    else s_data_exploration_log
+                )
+            except Exception as e:
+                result_str = f"Error executing code block: {e}"
+                # Also provide a stack trace for debugging purposes.
+                result_str += "\n\nStack trace:\n" + traceback.format_exc()
+
+            # Append the code itself and its results to the conversation,
+            # so that the LLM can refer to them in future deliberation and action selection.
+            convo_base.append(
+                "===\nLLM-PROVIDED CODE BLOCK\n===\n\n```python\n"
+                + code.strip()
+                + "\n```\n\n===\nOUTPUT OF LLM-PROVIDED CODE\n===\n\n"
+                + result_str
+            )
+
+        else:
+            await ctx.warning(
+                "LLM did not select a valid action. Here's what it said:\n"
+                + s_action.text
+            )
 
 
 @mcp.tool(
@@ -969,28 +1025,16 @@ async def ruc_execute_semantic_code_workflow(
         )
 
         data_exploration_report = await _explore_data(ctx, convo)
-        logger.info("Data exploration complete. Report:\n%s", data_exploration_report)
-        return {
-            "status": "unfinished",
-            "message": "Data exploration complete. Workflow execution not implemented yet.",
-            "data_exploration_report": data_exploration_report,
-        }
-
-    try:
-        await _is_ready_for_workflow(ctx, convo)
-    except Exception as e:
-        note = f"Model indicated it was not ready to write workflow code: {e}"
-        logger.warning(note)
-        execution_notes += f"{note}\n\n"
-        # If the model says it's not ready, we should stop here and return an error message to the user.
-        return {
-            "status": "error",
-            "execution_time_seconds": int(time.time() - start_time),
-            "message": "Model indicated it was not ready to write workflow code.",
-            "details": str(e),
-            "execution_notes": execution_notes.strip()
-            or "(no notes recorded during execution)",
-        }
+        await ctx.report_progress(
+            progress=0,
+            total=None,
+            message="Data exploration complete",
+        )
+        convo.append(
+            "We ran a preliminary exploratory analysis of the data sources. "
+            "Here is the report we generated from that analysis:\n\n---\n\n"
+            f"{data_exploration_report}"
+        )
 
     workflow_generation_result = await _write_workflow(ctx, convo)
     pycode = workflow_generation_result["pycode"]
@@ -1015,7 +1059,7 @@ async def ruc_execute_semantic_code_workflow(
         f.write(pycode)
 
     try:
-        runresult = await _execute_workflow_code(ctx, pycode, data_source_records)
+        runresult = await _execute_workflow_code(ctx, pycode)
         elapsed_seconds = int(time.time() - start_time)
         await ctx.info(f"Workflow execution complete after {elapsed_seconds} seconds.")
     except Exception as e:
@@ -1029,26 +1073,13 @@ async def ruc_execute_semantic_code_workflow(
             "implementation_strategy": implementation_strategy,
             "message": f"Workflow execution failed.",
             "details": str(e),
-            "execution_notes": execution_notes.strip()
-            or "(no notes recorded during execution)",
         }
-
-    execution_notes += (
-        f"\n\nWorkflow executed successfully."
-        "\n\nPlease take a moment to "
-        "inspect the results and confirm that they look like what you were asking for. "
-        "If not, please consider running RUC again with a clearer task description, "
-        "more detailed context explanation, more specific behavioral requirements, "
-        "or a more detailed expected result schema, as you see fit."
-    )
 
     retval = {
         "status": "success",
         "execution_time_seconds": elapsed_seconds,
         "implementation_strategy": implementation_strategy,
         "result": runresult,
-        "execution_notes": execution_notes.strip()
-        or "(no notes recorded during execution)",
     }
 
     return retval
