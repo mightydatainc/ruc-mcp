@@ -746,10 +746,13 @@ async def _replace_all_stubs_with_implementations(
     if not stubs or len(stubs) == 0:
         return pycode
 
+    status_msg = f"Implementing {len(stubs)} mid-workflow LLM callbacks"
+    if len(stubs) == 1:
+        status_msg = f"Implementing mid-workflow LLM callback"
     await ctx.report_progress(
         progress=0,
         total=None,
-        message=f"Implementing {len(stubs)} mid-workflow LLM callbacks",
+        message=status_msg,
     )
 
     stubfunctions_by_name: dict[str, str] = {}
@@ -1484,29 +1487,11 @@ async def ruc_execute_semantic_code_workflow(
     pycode = await _replace_all_stubs_with_implementations(ctx, pycode, convo)
     pycode = _delete_all_functions_with_designated_marker(pycode, "obsolete_stub")
 
-    # --------------------------------
-    # DELIBERATELY INTRODUCE AN ERROR SO THAT WE CAN TEST OUR ERROR HANDLING CODE.
-    # TODO DEBUG DELETE THIS LATER.
-    # Find the string "async def execute_workflow".
-    # Then, *after* that string, find the first occurrence of the word "return",
-    # and replace it with "returnt" (a misspelling of "return" that will cause a syntax error when we try to execute the code).
-    # This simulates a situation where the LLM made a mistake in its code generation.
-    workflow_function_def_position = pycode.find("async def execute_workflow")
-    if workflow_function_def_position != -1:
-        return_position = pycode.find("return", workflow_function_def_position)
-        if return_position != -1:
-            pycode = (
-                pycode[:return_position]
-                + "returnt"
-                + pycode[return_position + len("return") :]
-            )
-    # -----------------------------------
-
     execution_notes = "\n\n"
 
     while True:
-        # DEBUG: Save pycode to a local file, so we can inspect it if anything goes wrong during
-        # execution.
+        # If debugging is specified, save pycode to a local file,
+        # so we can inspect it if anything goes wrong during execution.
         if write_execution_workflow_file:
             try:
                 with open(write_execution_workflow_file, "w", encoding="utf-8") as f:
