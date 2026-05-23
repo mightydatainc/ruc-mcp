@@ -850,7 +850,7 @@ STAGE 3: ACTION SELECTION. I'll ask you to choose one of the following actions:
         add new ones. If you need to change something you wrote in a previous amendment,
         then write a new amendment describing the new knowledge or correction, and explicitly
         call out the fact that this is a correction to a previous amendment.
-    - WRITE_CODE: Write a block of Python code that processes the data in some way. This is your
+    - WRITE_CODE: Write a block of Python code that examines the data in some way. This is your
         means of performing "hands-on" exploration of the data. You can write code to read
         the data, to compute statistics about it, to visualize it, or to do anything else that
         might help you understand it better. You can write as many code blocks as you want,
@@ -912,7 +912,8 @@ STAGE 3: ACTION SELECTION.
 What would you like to do next? Talk it over with yourself, and then choose one of the 
 following actions:
 - AMEND_REPORT: Write an amendment to the report.
-- WRITE_CODE: Write a block of Python code that processes the data in some way.
+- WRITE_CODE: Write a block of Python code that examines the data in some way, or performs
+    some tentative or exploratory processing on the data.
 - FINISH: Declare that you're finished with data exploration, and that the report is complete.
 When you've decided on an option, write the words `ACTION_SELECTED: <chosen action>`,
 where <chosen action> is one of the three options listed above. Make sure that
@@ -930,7 +931,10 @@ Try to write your code defensively -- be mindful of things like looping over con
 when you don't know their length, and so on. You don't want to accidentally write an infinite
 loop that appends to `data_exploration_log`, or getting stuck on a locked resource or something.
 Remember, you don't have to actually *do* the requested workflow task yet -- you're just
-exploring for now.
+exploring for now.  Remember that you aren't being asked to write the final code that will 
+ultimately perform the requested task; this is just for exploration and learning purposes.
+Just be careful not to accidentally screw up the data while you're exploring it, e.g. by
+stomping the data files or something. Keep your operations non-destructive.
 
 If you chose AMEND_REPORT, then after writing `ACTION_SELECTED: AMEND_REPORT`, also write a
 text block enclosed in triple backticks labeled "```reportamendment". This block should contain
