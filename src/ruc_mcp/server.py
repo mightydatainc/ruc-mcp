@@ -158,10 +158,6 @@ async method called `ctx.report_progress(progress: float, total: float, message:
 shows the user a very convenient progress bar along with a short status message. Use these
 tools often to keep the user informed about what's going on!
 """
-# TODO: Instruct the LLM to write resumable code -- i.e. tell it to think about how it would
-# handle interruptions and restarts, and to write code that can pick up where it left off if
-# interrupted.
-
 INJECT_RUC_LLM_CALL_FUNCTION = """
 async def ruc_submit_sample_request_to_llm(
     messages: list[str],
@@ -1403,9 +1399,6 @@ async def ruc_execute_semantic_code_workflow(
     This tool ingests optional data sources, asks the model to generate workflow
     code, replaces semantic stubs with structured LLM-call implementations, and
     runs the resulting workflow against loaded records.
-
-    NOTE: Planned future expansions can include caches of code for frequently
-    requested workflows.
 
     Returns a status payload containing execution notes and a `result` field.
     """

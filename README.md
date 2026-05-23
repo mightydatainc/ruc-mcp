@@ -44,15 +44,16 @@ RUC exists to let the LLM serve as the interface and semantic engine, while givi
 
 ## Status
 
-This repository contains a working prototype, not just a scaffold. It demonstrates dynamic workflow generation, LLM-assisted semantic steps, and execution orchestration through FastMCP.
+This repository contains a working implementation. It demonstrates dynamic workflow generation, LLM-assisted semantic steps, and execution orchestration through FastMCP.
 
-Hardening work is still pending. In particular, generated code execution should move from the current in-process path to an isolated Docker-based sandbox with strict resource and timeout controls.
+Baseline hardening for execution isolation is in place: the MCP server runs in a Docker container via the workspace MCP configuration.
 
-## Scaffold layout
+Current development focus is on expanding reliability, test coverage, and operational maturity of the workflow pipeline.
+
+## Project layout
 
 - `src/ruc_mcp/server.py`: FastMCP server implementation for `ruc_execute_semantic_code_workflow`, including data loading, workflow generation, stub expansion, and execution orchestration.
-- `logs/temp_auto_generated_workflow.py`: debug artifact written at runtime with generated workflow code.
-- `tests/test_server.py`: tests covering server behavior in the current prototype scope.
+- `tests/test_server.py`: tests covering current server behavior.
 
 ## Run tests
 
@@ -62,7 +63,7 @@ python -m unittest discover -s tests -p "test*.py"
 
 ## Docker image
 
-This repository now carries the Docker build recipe for the MCP server. The intended workflow is to build the image locally or in CI, then have VS Code launch the prebuilt image. Do not check a built image into the repository.
+This repository carries the Docker build recipe for the MCP server. The intended workflow is to build the image locally or in CI, then have VS Code launch the prebuilt image. This repository is not intended to contain pre-built images.
 
 Build the image with:
 
@@ -75,3 +76,8 @@ docker build -t mightydatainc/ruc-mcp:local . --no-cache
 The workspace MCP configuration in `.vscode/mcp.json` expects that local tag and starts the server with `docker run --rm -i mightydatainc/ruc-mcp:local`.
 
 This keeps MCP startup fast and predictable because VS Code only launches the container; it does not rebuild the image each time the server starts.
+
+## Future expansions
+
+- Add resumable execution behavior so interrupted runs can pick up from saved progress.
+- Add caching for frequently requested workflows to reduce repeated generation overhead.
