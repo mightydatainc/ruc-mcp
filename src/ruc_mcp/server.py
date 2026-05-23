@@ -14,9 +14,6 @@ import re
 import time
 import traceback
 from typing import Annotated, Any, cast
-from urllib.parse import unquote, urlparse
-from urllib.request import Request, urlopen
-from urllib.request import url2pathname
 
 import fastmcp
 from mcp.types import SamplingMessage, TextContent
