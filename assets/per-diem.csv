@@ -1,0 +1,61 @@
+Date,Time,ConsultantName,Category,ItemName,Price,CreditCardTransactionDesc
+2026-05-05,07:12,Ava Patel,Transportation,Airport rideshare from hotel to JFK,54.38,UBER TRIP
+2026-05-05,08:03,Marcus Chen,Meals,Breakfast sandwich and coffee,14.72,STARBUCKS #1942 BOSTON MA
+2026-05-05,09:21,Elena Rodriguez,Fees,Conference registration pass,649.00,EVENTBRITE *TECHCONF PASS
+2026-05-05,12:44,Noah Williams,Meals,Client lunch at downtown bistro,38.55,SWEETGREEN CHICAGO IL
+2026-05-05,15:30,Priya Nair,Supplies,Notebook pack and markers,27.18,STAPLES #1152 DENVER CO
+2026-05-05,18:57,Daniel Kim,Lodging,Hotel night at Marriott Marquis,312.44,MARRIOTT MARQUIS NYC NY
+2026-05-05,20:11,Sofia Martinez,Incidentals,Checked baggage fee,40.00,DELTA BAGGAGE FEE JFK NY
+2026-05-05,21:36,Liam O'Connor,Transportation,Evening rideshare to hotel,31.49,LYFT *RIDE MON 09:36PM
+2026-05-06,06:48,Ava Patel,Meals,Airport coffee and bagel,11.26,PEETS COFFEE #087 SFO CA
+2026-05-06,08:14,Marcus Chen,Transportation,Flight segment to Atlanta,428.20,DELTA AIR LINES ATLANTA GA
+2026-05-06,10:52,Elena Rodriguez,Equipment,Portable monitor for onsite demo,229.99,BEST BUY #1420 SAN JOSE CA
+2026-05-06,12:09,Noah Williams,Meals,Salad and bottled water,19.34,SWEETGREEN NEW YORK NY
+2026-05-06,14:27,Priya Nair,Fees,Site access permit charge,85.00,SITE ACCESS PERMIT FEE
+2026-05-06,17:41,Daniel Kim,Lodging,Hotel night at Hilton Union Square,286.77,HILTON UNION SQ SF CA
+2026-05-06,19:18,Sofia Martinez,Transportation,Airport shuttle ticket,24.00,AIRPORT SHUTTLE JFK NY
+2026-05-06,21:02,Liam O'Connor,Incidentals,Laundry service for extended stay,18.50,MARRIOTT LAUNDRY SVCS NYC
+2026-05-07,07:05,Ava Patel,Transportation,Morning train to client city,96.00,AMTRAK WASHINGTON DC
+2026-05-07,08:39,Marcus Chen,Meals,Breakfast at hotel cafe,23.88,MARRIOTT CAFE NYC NY
+2026-05-07,11:16,Elena Rodriguez,Supplies,Printed handouts and binding,42.63,FEDEX OFFICE 0061 AUSTIN TX
+2026-05-07,13:02,Noah Williams,Meals,Team lunch,47.21,PANERA BREAD #1048 ATLANTA
+2026-05-07,15:49,Priya Nair,Equipment,Mobile hotspot monthly plan,89.99,VERIZON WIRELESS AUTH 839201
+2026-05-07,18:24,Daniel Kim,Lodging,Hotel night at Marriott Downtown,301.12,MARRIOTT DOWNTOWN CHICAGO IL
+2026-05-07,20:33,Sofia Martinez,Incidentals,Parking garage near convention center,29.00,SP PLUS PARKING CHICAGO IL
+2026-05-07,22:15,Liam O'Connor,Transportation,Late-night rideshare from ORD,43.75,UBER *TRIP HELP.UBER.COM
+2026-05-08,06:57,Ava Patel,Meals,Breakfast burrito and juice,16.42,WHOLEFDS PREP FOODS #1023
+2026-05-08,09:11,Marcus Chen,Transportation,Rental car daily charge,112.67,HERTZ RENTAL #2281 DALLAS TX
+2026-05-08,10:46,Elena Rodriguez,Fees,Conference day-two access pass,199.00,TICKETMASTER *CONF REG
+2026-05-08,12:58,Noah Williams,Meals,Lunch at airport terminal,27.95,DEAN AND DELUCA TERM C JFK
+2026-05-08,14:40,Priya Nair,Supplies,USB-C adapters and HDMI cable,34.91,OFFICE DEPOT #771 PHOENIX AZ
+2026-05-08,17:22,Daniel Kim,Lodging,Hotel night at Hilton Midtown,298.63,HILTON MIDTOWN NYC NY
+2026-05-08,19:07,Sofia Martinez,Incidentals,Wi-Fi upgrade on flight,14.99,DELTA WIFI PASS POS 7721
+2026-05-08,21:55,Liam O'Connor,Transportation,Taxi from airport to hotel,58.20,YELLOW CAB BOSTON MA
+2026-05-09,07:31,Ava Patel,Meals,Hotel breakfast buffet,31.00,HILTON BREAKFAST BOSTON MA
+2026-05-09,09:24,Marcus Chen,Transportation,Roundtrip rail ticket,74.50,AMTRAK 0583 BOSTON MA
+2026-05-09,11:03,Elena Rodriguez,Equipment,Portable document scanner,164.25,CDW GOVT LLC CHICAGO IL
+2026-05-09,13:47,Noah Williams,Fees,Temporary worksite badge fee,25.00,WORKSITE BADGE FEE #1234
+2026-05-09,16:12,Priya Nair,Supplies,Flip chart pads and tape,22.74,STAPLES #2044 SEATTLE WA
+2026-05-09,18:36,Daniel Kim,Lodging,Hotel night at Hyatt Regency,267.89,HYATT REGENCY SEATTLE WA
+2026-05-09,20:28,Sofia Martinez,Incidentals,City parking via mobile app,12.75,PARKMOBILE 8777275714
+2026-05-09,22:04,Liam O'Connor,Transportation,Evening rideshare in downtown area,26.83,LYFT *RIDE TST 0042
+2026-05-10,06:42,Ava Patel,Meals,Breakfast wrap and coffee,15.68,STARBUCKS #1187 SEATTLE WA
+2026-05-10,08:10,Marcus Chen,Transportation,Morning rideshare to airport,39.12,UBER TRIP
+2026-05-10,09:55,Elena Rodriguez,Fees,Expo hall entry fee,120.00,EXPO CTR ENTRY FEE #4471
+2026-05-10,11:23,Noah Williams,Supplies,Dry erase markers and sticky notes,19.43,OFFICE DEPOT #552 PORTLAND OR
+2026-05-10,13:08,Priya Nair,Meals,Lunch bowl and iced tea,22.17,SWEETGREEN SEATTLE WA
+2026-05-10,16:34,Daniel Kim,Equipment,Wireless presenter clicker,58.49,BEST BUY #2208 PORTLAND OR
+2026-05-10,18:11,Sofia Martinez,Lodging,Hotel night at Westin Downtown,289.50,WESTIN DOWNTOWN SEATTLE WA
+2026-05-10,20:49,Liam O'Connor,Incidentals,Hotel self parking charge,34.00,WESTIN PARKING SEATTLE WA
+2026-05-11,07:04,Ava Patel,Transportation,Regional rail ticket,63.25,AMTRAK 0711 PORTLAND OR
+2026-05-11,08:27,Marcus Chen,Meals,Hotel breakfast and fruit,28.40,HYATT BREAKFAST PORTLAND OR
+2026-05-11,10:15,Elena Rodriguez,Transportation,Flight change fare difference,87.00,UNITED AIRLINES HOUSTON TX
+2026-05-11,12:52,Noah Williams,Meals,Airport lunch combo,24.36,PANDA EXPRESS TERM B SFO
+2026-05-11,14:39,Priya Nair,Fees,Convention center day pass,75.00,CONVENTION CTR DAY PASS
+2026-05-11,17:20,Daniel Kim,Lodging,Hotel night at Marriott Waterfront,318.74,MARRIOTT WATERFRONT BOSTON MA
+2026-05-11,19:06,Sofia Martinez,Incidentals,In-flight Wi-Fi session,16.00,UNITED WIFI PASS POS 6630
+2026-05-11,21:41,Liam O'Connor,Transportation,Taxi from terminal to hotel,52.80,YELLOW CAB NEW YORK NY
+2026-05-12,07:19,Ava Patel,Supplies,Client workshop printing job,46.92,FEDEX OFFICE 0184 BOSTON MA
+2026-05-12,09:33,Marcus Chen,Equipment,Portable webcam for remote demo,92.15,CDW GOVT LLC CHICAGO IL
+2026-05-12,12:06,Elena Rodriguez,Meals,Team lunch at casual grill,41.77,CHOPT CREATIVE SALAD CO NYC
+2026-05-12,15:28,Noah Williams,Incidentals,Baggage recheck fee,35.00,DELTA BAGGAGE FEE ATL GA
