@@ -186,9 +186,15 @@ Post-release verification:
 
 ## Docker image
 
-This repository carries the Docker build recipe for the MCP server. The intended user workflow is to pull the image from GHCR, then have VS Code launch that pulled image. This repository is not intended to contain pre-built images.
+This repository carries the Docker build recipe for the MCP server. The intended user workflow is to pull the image from GHCR, then have VS Code launch that pulled image.
 
-Build the image with:
+Pull the image with:
+
+```bash
+docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
+```
+
+If you are developing this repository locally and want to build your own image, use:
 
 ```bash
 docker build -t mightydatainc/ruc-mcp:local . --no-cache
