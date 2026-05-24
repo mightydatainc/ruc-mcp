@@ -60,7 +60,7 @@ In practice, that usually means:
 
 - VS Code 1.100+
 - Docker installed and running
-- Access to pull the following Docker image from the GitHub Container Repository (GHCR): `ghcr.io/mighty-data-inc/ruc-mcp:latest`
+- Access to pull the following Docker image from the GitHub Container Repository (GHCR): `ghcr.io/mightydatainc/ruc-mcp:latest`
 
 ## Development Guide
 
@@ -82,7 +82,7 @@ This project provides the following commands to developers who are working on th
 
 *Render Unto Caesar* was developed by Mikhail Voloshin at [Mighty Data, Inc.](https://www.mightydatainc.com/)  Copyright &copy; 2026. Licensed under MIT License.
 
-Project repository on GitHub: https://github.com/Mighty-Data-Inc/ruc-mcp
+Project repository on GitHub: https://github.com/mightydatainc/ruc-mcp
 
 Please use the GitHub repository's issue tracker to report any problems or difficulties.
 

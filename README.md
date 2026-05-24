@@ -58,7 +58,7 @@ In practice, that usually means:
 
 ## Installation Guide
 
-The following instructions presume some familiarity with command-line tools. Fortunately, even if you don't have this familiarity yourself, your AI agent does! If you're reading this, and you don't know how to perform some of these steps, tell your agent: "Help me with following the Installation Guide at https://github.com/Mighty-Data-Inc/ruc-mcp". It'll know what to do.
+The following instructions presume some familiarity with command-line tools. Fortunately, even if you don't have this familiarity yourself, your AI agent does! If you're reading this, and you don't know how to perform some of these steps, tell your agent: "Help me with following the Installation Guide at https://github.com/mightydatainc/ruc-mcp". It'll know what to do.
 
 ### Prerequisites
 
@@ -80,7 +80,7 @@ Install Docker using the guide for your operating system:
 Using Docker, pull the image with:
 
 ```bash
-docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
+docker pull ghcr.io/mightydatainc/ruc-mcp:latest
 ```
 
 ### Integrating With Your AI Agent
@@ -91,7 +91,7 @@ Recommended: install the VS Code extension so users do not have to edit MCP conf
 
 1. Open Extensions in VS Code.
 2. Search for "Render Unto Caesar".
-3. Install the extension published by `mighty-data-inc`.
+3. Install the extension published by `mightydatainc`.
 4. Reload VS Code.
 5. Run `MCP: List Servers` and verify "Render Unto Caesar" appears.
 
@@ -116,7 +116,7 @@ Open your VS Code **global** MCP configuration by opening your Command Palette (
         "RUC_MCP_LOG_LEVEL=DEBUG",
         "-v",
         "${workspaceFolder}:/workspace",
-        "ghcr.io/mighty-data-inc/ruc-mcp:latest"
+        "ghcr.io/mightydatainc/ruc-mcp:latest"
       ]
     }
   }
@@ -192,9 +192,9 @@ git push origin v0.1.0
 
 This publishes the following tags to GHCR:
 
-- `ghcr.io/mighty-data-inc/ruc-mcp:v0.1.0`
-- `ghcr.io/mighty-data-inc/ruc-mcp:0.1.0`
-- `ghcr.io/mighty-data-inc/ruc-mcp:latest`
+- `ghcr.io/mightydatainc/ruc-mcp:v0.1.0`
+- `ghcr.io/mightydatainc/ruc-mcp:0.1.0`
+- `ghcr.io/mightydatainc/ruc-mcp:latest`
 
 ## Status
 

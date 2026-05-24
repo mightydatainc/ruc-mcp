@@ -2,8 +2,8 @@
   "name": "ruc-mcp-server",
   "displayName": "Render Unto Caesar (MCP Server)",
   "description": "Interweave the semantic judgment of LLMs with the procedural rigor of code.",
-  "version": "0.1.3",
-  "publisher": "mighty-data-inc",
+  "version": "0.1.0",
+  "publisher": "mightydatainc",
   "license": "MIT",
   "icon": "assets/render-unto-caesar-128-tight.png",
   "engines": {
@@ -32,7 +32,7 @@
   "contributes": {
     "mcpServerDefinitionProviders": [
       {
-        "id": "mighty-data-inc.ruc-mcp-provider",
+        "id": "mightydatainc.ruc-mcp-provider",
         "label": "Run AI tasks with the reliability of procedural code"
       }
     ]
@@ -42,10 +42,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Mighty-Data-Inc/ruc-mcp.git"
+    "url": "https://github.com/mightydatainc/ruc-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/Mighty-Data-Inc/ruc-mcp/issues"
+    "url": "https://github.com/mightydatainc/ruc-mcp/issues"
   },
-  "homepage": "https://github.com/Mighty-Data-Inc/ruc-mcp"
+  "homepage": "https://github.com/mightydatainc/ruc-mcp"
 }

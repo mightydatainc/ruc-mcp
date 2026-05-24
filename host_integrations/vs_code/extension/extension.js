@@ -36,7 +36,7 @@ function activate(context) {
 
       // The last argument is the image to run.
       // Use the published GHCR image for the server runtime.
-      args.push("ghcr.io/mighty-data-inc/ruc-mcp:latest");
+      args.push("ghcr.io/mightydatainc/ruc-mcp:latest");
 
       const currentPackageVersionNumber = require("./package.json").version;
 
@@ -75,7 +75,7 @@ function activate(context) {
   };
 
   const registration = vscode.lm.registerMcpServerDefinitionProvider(
-    "mighty-data-inc.ruc-mcp-provider",
+    "mightydatainc.ruc-mcp-provider",
     provider,
   );
 
