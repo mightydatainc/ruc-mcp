@@ -89,7 +89,7 @@ docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
 
 #### VS Code
 
-Add a `.vscode/mcp.json` file to your workspace folder (or open the one already present in this repository) with the following contents:
+Open your VS Code **global** MCP configuration (Command Palette → `MCP: Open User Configuration`) and add the following server entry:
 
 ```json
 {
@@ -106,16 +106,18 @@ Add a `.vscode/mcp.json` file to your workspace folder (or open the one already 
         "RUC_MCP_LOG_LEVEL=DEBUG",
         "-v",
         "${workspaceFolder}:/workspace",
-        "mightydatainc/ruc-mcp:local"
+        "ghcr.io/mighty-data-inc/ruc-mcp:latest"
       ]
     }
   }
 }
 ```
 
-VS Code will automatically detect this file and make the "Render Unto Caesar" MCP server available to GitHub Copilot and other MCP-aware extensions. The server runs via Docker, mounting your workspace folder into the container at `/workspace` so that RUC can read and write your local files.
+VS Code will use your global MCP configuration and make the "Render Unto Caesar" MCP server available to GitHub Copilot and other MCP-aware extensions. The server runs via Docker, mounting your workspace folder into the container at `/workspace` so that RUC can read and write your local files.
 
-Make sure you have [built the Docker image locally](#docker-image) before starting the server.
+Make sure you have [pulled the Docker image](#docker-image) before starting the server.
+
+If you intentionally prefer workspace-scoped configuration, this repository includes `.vscode/mcp.json` as a reference example; the recommended default setup is global configuration.
 
 #### Cursor
 
@@ -127,7 +129,7 @@ Make sure you have [built the Docker image locally](#docker-image) before starti
 
 This repository contains a working implementation. It demonstrates dynamic workflow generation, LLM-assisted semantic steps, and execution orchestration through FastMCP.
 
-Baseline hardening for execution isolation is in place: the MCP server runs in a Docker container via the workspace MCP configuration.
+Baseline hardening for execution isolation is in place: the MCP server runs in a Docker container via MCP configuration.
 
 Current development focus is on expanding reliability, test coverage, and operational maturity of the workflow pipeline.
 
@@ -184,9 +186,15 @@ Post-release verification:
 
 ## Docker image
 
-This repository carries the Docker build recipe for the MCP server. The intended workflow is to build the image locally or in CI, then have VS Code launch the prebuilt image. This repository is not intended to contain pre-built images.
+This repository carries the Docker build recipe for the MCP server. The intended user workflow is to pull the image from GHCR, then have VS Code launch that pulled image.
 
-Build the image with:
+Pull the image with:
+
+```bash
+docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
+```
+
+If you are developing this repository locally and want to build your own image, use:
 
 ```bash
 docker build -t mightydatainc/ruc-mcp:local . --no-cache
@@ -194,7 +202,7 @@ docker build -t mightydatainc/ruc-mcp:local . --no-cache
 
 (The --no-cache flag is optional. When specified, Docker will rebuild the image from scratch. If omitted, Docker will build atop an existing image if one is present.)
 
-The workspace MCP configuration in `.vscode/mcp.json` expects that local tag and starts the server with `docker run --rm -i mightydatainc/ruc-mcp:local`.
+The MCP configuration should reference the pulled image tag and start the server with `docker run --rm -i ghcr.io/mighty-data-inc/ruc-mcp:latest`.
 
 This keeps MCP startup fast and predictable because VS Code only launches the container; it does not rebuild the image each time the server starts.
 
