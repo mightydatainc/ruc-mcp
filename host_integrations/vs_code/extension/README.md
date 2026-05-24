@@ -1,45 +1,58 @@
 # Render Unto Caesar MCP Server (VS Code Extension)
 
-This extension exposes the Render Unto Caesar (RUC) MCP server to VS Code chat tools.
+This extension makes Render Unto Caesar (RUC) installable in VS Code with no manual MCP JSON editing.
 
-## What it does
+## What users get
 
-- Registers a local stdio MCP server definition named "Render Unto Caesar".
-- Starts RUC via Docker using image `ghcr.io/mighty-data-inc/ruc-mcp:latest`.
-- Mounts the first open workspace folder to `/workspace` in the container.
+- A discoverable MCP server named "Render Unto Caesar" in VS Code.
+- Automatic server definition registration via extension contribution metadata.
+- Docker-based runtime using `ghcr.io/mighty-data-inc/ruc-mcp:latest`.
+- Active workspace mount to `/workspace` inside the container.
 
 ## Requirements
 
-- Docker installed and running.
-- Access to pull `ghcr.io/mighty-data-inc/ruc-mcp:latest`.
+- VS Code 1.100+
+- Docker installed and running
+- Access to pull `ghcr.io/mighty-data-inc/ruc-mcp:latest`
 
-## Notes
+## End-user install
 
-- If you use private GHCR packages, Docker auth is required.
-- If your workspace has no folder open, the extension will still register the server but without a workspace mount.
+### Option A: VS Code Marketplace (recommended)
 
-## Build and install locally
+1. Open Extensions in VS Code.
+2. Search for "Render Unto Caesar".
+3. Install the extension published by `mighty-data-inc`.
+4. Reload VS Code.
 
-From this folder (`host_integrations/vs_code/extension`):
+### Option B: VSIX file
+
+```bash
+code --install-extension ./ruc-mcp-server.vsix
+```
+
+Then reload VS Code.
+
+## Verify install
+
+1. Open any workspace folder.
+2. Open Command Palette and run `MCP: List Servers`.
+3. Confirm `Render Unto Caesar` appears.
+
+## Maintainer packaging and publishing
+
+From `host_integrations/vs_code/extension`:
 
 ```bash
 npm install
 npm run package:vsix
 ```
 
-This creates a local VSIX package at `build/ruc-mcp-server.vsix`.
+This creates `build/ruc-mcp-server.vsix`.
 
-Install it into your local VS Code:
+Local reinstall test:
 
 ```bash
-code --install-extension ./build/ruc-mcp-server.vsix
+code --install-extension ./build/ruc-mcp-server.vsix --force
 ```
 
-Reload VS Code after installation.
-
-## Local smoke test
-
-1. Open a workspace folder in VS Code.
-2. Open Chat and run `MCP: List Servers` from the Command Palette.
-3. Confirm `Render Unto Caesar` appears.
-4. Run a chat prompt that should invoke RUC tools.
+To publish to Marketplace, run `vsce publish` with your publisher credentials/token configured.

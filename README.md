@@ -87,6 +87,18 @@ docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
 
 #### VS Code
 
+Recommended: install the VS Code extension so users do not have to edit MCP config JSON.
+
+1. Open Extensions in VS Code.
+2. Search for "Render Unto Caesar".
+3. Install the extension published by `mighty-data-inc`.
+4. Reload VS Code.
+5. Run `MCP: List Servers` and verify "Render Unto Caesar" appears.
+
+The extension registers and launches the MCP server definition automatically.
+
+Manual configuration fallback (only if extension installation is unavailable):
+
 Open your VS Code **global** MCP configuration by opening your Command Palette (Control-Shift-P) and typing `MCP: Open User Configuration`. Add the following server entry:
 
 ```json
