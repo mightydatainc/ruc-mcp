@@ -1,0 +1,33 @@
+{
+  "name": "ruc-mcp-server",
+  "displayName": "Render Unto Caesar MCP Server",
+  "description": "Installs and configures the Render Unto Caesar MCP server for VS Code chat tools.",
+  "version": "0.1.0",
+  "publisher": "mighty-data-inc",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "AI"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "copilot",
+    "tools",
+    "ruc"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mighty-Data-Inc/ruc-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Mighty-Data-Inc/ruc-mcp/issues"
+  },
+  "homepage": "https://github.com/Mighty-Data-Inc/ruc-mcp"
+}
