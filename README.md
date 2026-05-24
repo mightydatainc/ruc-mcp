@@ -1,9 +1,8 @@
 # Render Unto Caesar (RUC) (`ruc-mcp`)
 
-<p align="center"><strong>Deterministic execution + LLM judgment in one workflow.</strong></p>
+*Render Unto Caesar (RUC)* plugs into your AI agent and gives it the ability to write and run snippets of code on an as-needed basis &mdash; snippets of code that call right back to the AI agent during their execution. It effectively melds LLMs with traditional software, allowing each part of a task to be handled by the architecture that suits it best. The result is inference, judgment, and creativity that nonetheless executes methodically and reliably across long operations, large datasets, and complex processes.
 
-> [!IMPORTANT]
-> *Render Unto Caesar (RUC)* plugs into your AI agent and gives it the ability to write and run snippets of code on an as-needed basis &mdash; snippets of code that call right back to the AI agent during their execution. It effectively melds LLMs with traditional software, allowing each part of a task to be handled by the architecture that suits it best. The result is inference, judgment, and creativity that nonetheless executes methodically and reliably across long operations, large datasets, and complex processes.
+## Deterministic execution + LLM judgment in a single integrated workflow
 
 > **If you've built a machine whose whole purpose is to be less machine-like, but you still ask it to do machine-like things, you're going to have a bad time.**
 >
@@ -21,7 +20,7 @@
 >
 > RUC is built around that distinction: **Let the neural network handle interpretation, judgment, and creativity. Let the computer handle execution.**
 
-LLMs make a great interface for requesting tasks, but a poor engine for executing them. They are good at writing verbiage and assessing messy or ambiguous information, but poor at carrying out long, exact procedures. When an operation requires both the fuzziness of LLMs and the methodical rigor of traditional code, **Render Unto Caesar** (RUC) bridges the gap. RUC separates the work into the parts that need interpretation and the parts that need machinery, and makes them interoperate to give you the best of both worlds.
+LLMs make a great interface for requesting tasks, but a poor engine for executing them. They are good at writing verbiage and assessing messy or ambiguous information, but poor at carrying out long, exact procedures. When an operation requires both the fuzziness of LLMs and the methodical rigor of traditional code, **Render Unto Caesar (RUC)** bridges the gap. RUC separates the work into the parts that need interpretation and the parts that need machinery, and makes them interoperate to give you the best of both worlds.
 
 Modern LLM apps make it natural to ask for complex work in plain English. The problem is that plain-English requests often mix together things LLMs are good at with things they are famously bad at. A user might ask ChatGPT, Claude, or Cursor to review support tickets, impute missing data in a spreadsheet, or brainstorm a series of ads. Those tasks require judgment and creativity, but they also require loops, counts, state, validation, consistency, and auditability &mdash; the stuff traditional code is built for.
 
@@ -29,22 +28,14 @@ Most users, even engineers, don’t naturally separate those two layers when the
 
 The result is a system that can do LLM-shaped work with the control, structure, and repeatability of procedural software.
 
-## Core idea
+### Core idea
 
 Render Unto Caesar is built around a simple split:
 
-- **Code handles** loops, state, arithmetic, validation, retries, files, progress tracking, and aggregation.
-- **LLMs handle** creative writing, classification, summarization, ambiguity resolution, fuzzy matching, and other semantic decisions.
+- **Code handles** loops, arithmetic, validation, retries, files, progress tracking, aggregation, and state management.
+- **LLMs handle** language comprehension, creative writing, classification, summarization, ambiguity resolution, fuzzy matching, and other semantic decisions.
 
 The important part is not merely that both are available. The important part is that RUC defines the boundary between them, so procedural code and LLM judgment can safely interoperate inside one workflow.
-
-## Why this matters
-
-As LLMs become the interface to more software, users increasingly ask them to perform tasks that are partly semantic and partly procedural. Without a system like RUC, the LLM is often asked to do everything itself: reason, loop, count, remember progress, validate outputs, and produce final results.
-
-That is exactly where LLMs are weakest.
-
-RUC exists to let the LLM serve as the interface and semantic engine, while giving the procedural work back to code.
 
 ## Who this is for
 
