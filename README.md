@@ -1,5 +1,10 @@
 # Render Unto Caesar (RUC) (`ruc-mcp`)
 
+<p align="center"><strong>Deterministic execution + LLM judgment in one workflow.</strong></p>
+
+> [!IMPORTANT]
+> *Render Unto Caesar (RUC)* plugs into your AI agent and gives it the ability to write and run snippets of code on an as-needed basis &mdash; snippets of code that call right back to the AI agent during their execution. It effectively melds LLMs with traditional software, allowing each part of a task to be handled by the architecture that suits it best. The result is inference, judgment, and creativity that nonetheless executes methodically and reliably across long operations, large datasets, and complex processes.
+
 > **If you've built a machine whose whole purpose is to be less machine-like, but you still ask it to do machine-like things, you're going to have a bad time.**
 >
 > Foundation model developers keep training LLMs to follow user instructions more faithfully. They expend untold gigajoules of energy and eons of CPU/GPU time trying to get neural networks &mdash; fundamentally fickle probabilistic beasts by their very nature &mdash; to execute steps in the order they're given, and to refrain from getting distracted, prematurely declaring completion, or outright inventing completely new un-asked-for operations.
