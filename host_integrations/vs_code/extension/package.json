@@ -18,6 +18,12 @@
     "tools",
     "ruc"
   ],
+  "scripts": {
+    "package:vsix": "vsce package"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.6.2"
+  },
   "main": "./extension.js",
   "activationEvents": [
     "onStartupFinished"
