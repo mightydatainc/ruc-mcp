@@ -19,7 +19,7 @@
     "ruc"
   ],
   "scripts": {
-    "package:vsix": "vsce package"
+    "package:vsix": "node -e \"require('fs').mkdirSync('build',{recursive:true})\" && vsce package --out build/ruc-mcp-server.vsix"
   },
   "devDependencies": {
     "@vscode/vsce": "^3.6.2"

@@ -27,12 +27,12 @@ npm install
 npm run package:vsix
 ```
 
-This creates a local VSIX package (for example `ruc-mcp-server-0.1.0.vsix`).
+This creates a local VSIX package at `build/ruc-mcp-server.vsix`.
 
 Install it into your local VS Code:
 
 ```bash
-code --install-extension ./ruc-mcp-server-0.1.0.vsix
+code --install-extension ./build/ruc-mcp-server.vsix
 ```
 
 Reload VS Code after installation.
