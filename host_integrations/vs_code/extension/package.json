@@ -3,7 +3,7 @@
   "displayName": "Render Unto Caesar (MCP Server)",
   "description": "Interweave the semantic judgment of LLMs with the procedural rigor of code.",
   "version": "0.1.1",
-  "publisher": "Mighty Data, Inc.",
+  "publisher": "mighty-data-inc",
   "license": "MIT",
   "icon": "assets/icon.png",
   "engines": {
