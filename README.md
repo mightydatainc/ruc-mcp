@@ -89,7 +89,7 @@ docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
 
 #### VS Code
 
-Open your VS Code **global** MCP configuration and add the following server entry:
+Open your VS Code **global** MCP configuration (Command Palette → `MCP: Open User Configuration`) and add the following server entry:
 
 ```json
 {
@@ -116,6 +116,8 @@ Open your VS Code **global** MCP configuration and add the following server entr
 VS Code will use your global MCP configuration and make the "Render Unto Caesar" MCP server available to GitHub Copilot and other MCP-aware extensions. The server runs via Docker, mounting your workspace folder into the container at `/workspace` so that RUC can read and write your local files.
 
 Make sure you have [pulled the Docker image](#docker-image) before starting the server.
+
+If you want a workspace-scoped reference, this repository also includes `.vscode/mcp.json`, but the recommended setup is global configuration.
 
 #### Cursor
 
