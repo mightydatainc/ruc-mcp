@@ -2,7 +2,7 @@
   "name": "ruc-mcp-server",
   "displayName": "Render Unto Caesar (MCP Server)",
   "description": "Interweave the semantic judgment of LLMs with the procedural rigor of code.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "mightydatainc",
   "license": "MIT",
   "icon": "assets/render-unto-caesar-128-tight.png",
