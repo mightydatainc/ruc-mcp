@@ -117,7 +117,7 @@ VS Code will use your global MCP configuration and make the "Render Unto Caesar"
 
 Make sure you have [pulled the Docker image](#docker-image) before starting the server.
 
-If you want a workspace-scoped reference, this repository also includes `.vscode/mcp.json`, but the recommended setup is global configuration.
+If you intentionally prefer workspace-scoped configuration, this repository includes `.vscode/mcp.json` as a reference example; the recommended default setup is global configuration.
 
 #### Cursor
 
