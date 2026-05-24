@@ -10,7 +10,7 @@
 >
 > This is a silly thing to optimize for.
 >
-> **We already have machines that follow instructions exactly, repeatably, and tirelessly. They are called computers.**
+> **We already have machines that follow instructions exactly, repeatably, and tirelessly. They're called *computers*.**
 >
 > Neural networks make bad computers. Yes, neural networks *run on* computers, but that fact alone doesn't magically grant them the ability to work *as* computers &mdash; any more so than the fact that you're made of cells automatically makes you a microbiologist.
 >
@@ -56,24 +56,6 @@ In practice, that usually means:
 4. A national advertising executive wants to create custom copy for an ad to run on a county-by-county basis for all 3,144 counties in the United States.
 5. An engineer is helping non-engineering teammates run recurring data correction workflows, involving imputation of missing data, cleanup of messy fields, etc.
 
-## Status
-
-This repository contains a working implementation. It demonstrates dynamic workflow generation, LLM-assisted semantic steps, and execution orchestration through FastMCP.
-
-Baseline hardening for execution isolation is in place: the MCP server runs in a Docker container via the workspace MCP configuration.
-
-Current development focus is on expanding reliability, test coverage, and operational maturity of the workflow pipeline.
-
-## Project layout
-
-- `src/ruc_mcp/server.py`: FastMCP server implementation for `ruc_execute_semantic_code_workflow`, including data loading, workflow generation, stub expansion, and execution orchestration.
-- `tests/test_server.py`: tests covering current server behavior.
-
-## Run tests
-
-```bash
-python -m unittest discover -s tests -p "test*.py"
-```
 
 ## CI and release automation
 
@@ -92,6 +74,12 @@ This publishes the following tags to GHCR:
 - `ghcr.io/mighty-data-inc/ruc-mcp:v0.1.0`
 - `ghcr.io/mighty-data-inc/ruc-mcp:0.1.0`
 - `ghcr.io/mighty-data-inc/ruc-mcp:latest`
+
+### Run tests
+
+```bash
+python -m unittest discover -s tests -p "test*.py"
+```
 
 ### Release checklist
 
@@ -131,7 +119,11 @@ The workspace MCP configuration in `.vscode/mcp.json` expects that local tag and
 
 This keeps MCP startup fast and predictable because VS Code only launches the container; it does not rebuild the image each time the server starts.
 
-## Future expansions
+## Status
+
+2026-05-23 &mdash; First release: v0.1.0 published to GitHub Container Repository (GHCR).
+
+### Future expansions
 
 - Add resumable execution behavior so interrupted runs can pick up from saved progress.
 - Add caching for frequently requested workflows to reduce repeated generation overhead.
