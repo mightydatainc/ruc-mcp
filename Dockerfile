@@ -17,6 +17,6 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 
 RUN mkdir -p /app/logs \
-    && pip install .[datasci]
+    && pip install .[datasci,officedocs]
 
 CMD ["python", "-m", "ruc_mcp"]

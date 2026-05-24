@@ -55,7 +55,25 @@ mcp: fastmcp.FastMCP = fastmcp.FastMCP(
     ),
 )
 
-RUC_FUNCTION_WRITING_SYSTEM_PROMPT = """
+RUC_PYTHON_ENVIRONMENT: str = """
+The environment you'll be running in is a python-3.12:slim Docker image, with standard 
+libraries such as `json`, `re`, `pydantic`, and so on. In addition, the environment comes installed
+with the following libraries, which may come in handy for you:
+- Science and data libraries: `numpy`, `pandas`, `scipy`, `scikit-learn`, and `statsmodels`.
+- Spreadsheets: `openpyxl` for working with Excel files, and `odfpy` for OpenDocument spreadsheets.
+- Office documents: `python-docx` for MS Word, `docutils` for reStructuredText, `beautifulsoup4` for
+    HTML parsing, and `pypdf` for working with PDFs.
+
+The Docker container is sandboxed against network and filesystem access; but you
+have read/write access to the folder /workspace, which you may use for reading source data and/or
+writing output files using standard Python file I/O. You can also write to /tmp for "scratchpad"
+work, of course.
+
+(NOTE: the __future__ library in your environment is extremely flakey and unreliable, and
+must be avoided (not that you should need it anyway)).
+"""
+
+RUC_FUNCTION_WRITING_SYSTEM_PROMPT: str = f"""
 In today's work session, you'll write a Python function called `execute_workflow`.
 It will adhere to the following calling convention and structure:
 
@@ -70,19 +88,10 @@ async def execute_workflow(ctx: fastmcp.Context) -> dict:
 
 Your Execution Environment: python-3.12:slim Docker image with /workspace mount and scientific/data libraries
 
-The environment you'll be running in is a python-3.12:slim Docker image, with standard 
-libraries such as `json`, `re`, `pydantic`, and so on. In addition, the environment comes installed
-with the following scientific/data libraries: `numpy`, `pandas`, `scipy`, `scikit-learn`, and
-`statsmodels`. The Docker container is sandboxed against network and filesystem access; but you
-have read/write access to the folder /workspace, which you may use for reading source data and/or
-writing output files as requested by the task. You can also write to /tmp for "scratchpad" work,
-of course.
+{RUC_PYTHON_ENVIRONMENT}
 
 The environment also has `fastmcp` installed, which provides the `Context` class for communicating
 with the LLM (more on that below).
-
-(NOTE: the __future__ library in your environment is extremely flakey and unreliable, and
-must be avoided (not that you should need it anyway)).
 
 ---
 
@@ -847,7 +856,7 @@ in all caps.
 
     report = ""
 
-    system_prompt = """
+    system_prompt: str = f"""
 You're an AI agent that's been assigned a task. The task involves working with some data sources.
 You are just beginning to work on the task. The first step of any such endeavor is
 data exploration. You need to get a good understanding of the data you'll be working with.
@@ -858,10 +867,9 @@ quirks or gotchas or anomalies it might have. Your job at the moment is *not* to
 perform the requested task. Your job is to explore the data and understand it well enough
 that you could write code to process it later.
 
-You're running in a Python 3.12 Docker container. The environment comes installed with `numpy`,
-`pandas`, `scipy`, `scikit-learn`, and `statsmodels`, in addition to standard libraries. The
-Docker container is sandboxed, but you can access files through a shared mount at `/workspace`
-using standard Python file I/O. Using Python, you should be able to do everything you need,
+{RUC_PYTHON_ENVIRONMENT}
+
+Using Python, you should be able to do everything you need,
 including listing folder contents, reading files, parsing files, and so on. (You do, of course,
 have to import the corresponding libraries first.)
 
@@ -1127,7 +1135,7 @@ request for a task that required interopration between LLM calls and traditional
 
 The code was invoked as an MCP server. It runs inside a Docker container built from a
 python:3.12-slim image, with a few science and data libraries installed
-(numpy, pandas, scipy, scikit-learn, and statsmodels).
+(numpy, pandas, scipy, scikit-learn, statsmodels, and a few others).
 
 The user will show you the code itself, and will then show you the error that caused the code
 to break.

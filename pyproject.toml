@@ -4,15 +4,24 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ruc-mcp"
-version = "0.0.0"
+version = "0.1.2"
 description = "Render Unto Caesar MCP scaffold"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastmcp>=3.3.1",    
+    "fastmcp>=3.3.1",
 ]
 
 [project.optional-dependencies]
+officedocs = [
+    "openpyxl>=3.1",
+    "odfpy>=1.4",
+    "python-docx>=1.1",
+    "docutils>=0.21",
+    "beautifulsoup4>=4.12",
+    "pypdf>=4.2",
+]
+
 datasci = [
     "numpy>=2.0",
     "pandas>=2.2",
