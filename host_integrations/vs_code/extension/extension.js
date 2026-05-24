@@ -52,12 +52,13 @@ function activate(context) {
       // - A fixed string gives deterministic change detection behavior.
       // - Bump this when you intentionally change the server definition
       //   shape/behavior exposed by the extension.
-      const serverDefinition = new vscode.McpStdioServerDefinition({
-        label: "Render Unto Caesar",
-        command: "docker",
+      const serverDefinition = new vscode.McpStdioServerDefinition(
+        "Render Unto Caesar",
+        "docker",
         args,
-        version: currentPackageVersionNumber,
-      });
+        undefined,
+        currentPackageVersionNumber,
+      );
 
       return [serverDefinition];
     },
