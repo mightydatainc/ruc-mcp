@@ -1,0 +1,15 @@
+# Development dependencies and caches
+node_modules/**
+
+# Local build and packaging artifacts
+build/**
+*.vsix
+
+# Source control and editor metadata
+.git/**
+.gitignore
+.vscode/**
+.vscodeignore
+
+# Project-only files not needed at runtime
+package-lock.json
