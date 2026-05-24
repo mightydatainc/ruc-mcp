@@ -12,7 +12,7 @@
         "RUC_MCP_LOG_LEVEL=DEBUG",
         "-v",
         "${workspaceFolder}:/workspace",
-        "mightydatainc/ruc-mcp:local"
+        "ghcr.io/mighty-data-inc/ruc-mcp:latest"
       ]
     }
   }
