@@ -87,7 +87,7 @@ docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
 
 #### VS Code
 
-Open your VS Code **global** MCP configuration (Command Palette (open with Control-Shift-P) → `MCP: Open User Configuration`) and add the following server entry:
+Open your VS Code **global** MCP configuration by opening your Command Palette (Control-Shift-P) and typing `MCP: Open User Configuration`. Add the following server entry:
 
 ```json
 {
@@ -117,28 +117,25 @@ For best results, make sure you have [pulled the Docker image](#docker-image) be
 
 #### Cursor
 
+TBD
+
 #### Claude Desktop
+
+TBD
 
 #### Codex
 
+TBD
 
-## CI and release automation
+## Development
 
-- CI runs on pushes to `main` and on pull requests.
-- Docker publishing to GHCR is automated on version tags matching `v*`.
-
-To publish a release image, push a tag like:
+### Build the Docker image locally
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+docker build -t mightydatainc/ruc-mcp:local . --no-cache
 ```
 
-This publishes the following tags to GHCR:
-
-- `ghcr.io/mighty-data-inc/ruc-mcp:v0.1.0`
-- `ghcr.io/mighty-data-inc/ruc-mcp:0.1.0`
-- `ghcr.io/mighty-data-inc/ruc-mcp:latest`
+(The --no-cache flag is optional. When specified, Docker will rebuild the image from scratch. If omitted, Docker will build atop an existing image if one is present.)
 
 ### Run tests
 
@@ -168,27 +165,24 @@ Post-release verification:
 2. Run the container with a sample MCP invocation.
 3. Confirm your client config references the intended tag.
 
-## Docker image
 
-This repository carries the Docker build recipe for the MCP server. The intended user workflow is to pull the image from GHCR, then have VS Code launch that pulled image.
+### CI and release automation
 
-Pull the image with:
+- CI runs on pushes to `main` and on pull requests.
+- Docker publishing to GHCR is automated on version tags matching `v*`.
 
-```bash
-docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
-```
-
-If you are developing this repository locally and want to build your own image, use:
+To publish a release image, push a tag like:
 
 ```bash
-docker build -t mightydatainc/ruc-mcp:local . --no-cache
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
-(The --no-cache flag is optional. When specified, Docker will rebuild the image from scratch. If omitted, Docker will build atop an existing image if one is present.)
+This publishes the following tags to GHCR:
 
-The MCP configuration should reference the pulled image tag and start the server with `docker run --rm -i ghcr.io/mighty-data-inc/ruc-mcp:latest`.
-
-This keeps MCP startup fast and predictable because VS Code only launches the container; it does not rebuild the image each time the server starts.
+- `ghcr.io/mighty-data-inc/ruc-mcp:v0.1.0`
+- `ghcr.io/mighty-data-inc/ruc-mcp:0.1.0`
+- `ghcr.io/mighty-data-inc/ruc-mcp:latest`
 
 ## Status
 
