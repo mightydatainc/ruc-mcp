@@ -62,13 +62,29 @@ In practice, that usually means:
 - Docker installed and running
 - Access to pull the following Docker image from the GitHub Container Repository (GHCR): `ghcr.io/mighty-data-inc/ruc-mcp:latest`
 
-## VS Code Extension Development Instructions
+## Development Guide
+
+### Commands and Workflows
+
+This project provides the following commands to developers who are working on this extension locally.
 
 - Build the VSIX file locally: `npm run build`
 - Install the extension into your VS Code: `npm run install`
   - Open or restart VS Code
   - Look in your list of Extensions
   - "Render Unto Caesar" should be there
-1. Publish to the VS Code Extension Marketplace: `npm run publish`
+- Publish to the VS Code Extension Marketplace: `npm run publish`
   - Need to have publisher token and credentials in place
+
+### Developer
+
+<img src="https://avatars.githubusercontent.com/u/83461102" alt="Mighty Data Inc logo" align="right" width="140" />
+
+*Render Unto Caesar* was developed by Mikhail Voloshin at [Mighty Data, Inc.](https://www.mightydatainc.com/)  Copyright &copy; 2026. Licensed under MIT License.
+
+Project repository on GitHub: https://github.com/Mighty-Data-Inc/ruc-mcp
+
+Please use the GitHub repository's issue tracker to report any problems or difficulties.
+
+<br clear="right" />
 
