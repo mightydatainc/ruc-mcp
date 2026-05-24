@@ -53,7 +53,7 @@ function activate(context) {
       // - Bump this when you intentionally change the server definition
       //   shape/behavior exposed by the extension.
       const serverDefinition = new vscode.McpStdioServerDefinition(
-        "Render Unto Caesar",
+        'Render Unto Caesar ("RUC")',
         "docker",
         args,
         undefined,

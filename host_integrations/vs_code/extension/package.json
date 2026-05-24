@@ -33,7 +33,7 @@
     "mcpServerDefinitionProviders": [
       {
         "id": "mighty-data-inc.ruc-mcp-provider",
-        "label": "Render Unto Caesar"
+        "label": "Run AI tasks with the reliability of procedural code"
       }
     ]
   },
