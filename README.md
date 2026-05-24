@@ -79,6 +79,46 @@ Current development focus is on expanding reliability, test coverage, and operat
 python -m unittest discover -s tests -p "test*.py"
 ```
 
+## CI and release automation
+
+- CI runs on pushes to `main` and on pull requests.
+- Docker publishing to GHCR is automated on version tags matching `v*`.
+
+To publish a release image, push a tag like:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+This publishes the following tags to GHCR:
+
+- `ghcr.io/mighty-data-inc/ruc-mcp:v0.1.0`
+- `ghcr.io/mighty-data-inc/ruc-mcp:0.1.0`
+- `ghcr.io/mighty-data-inc/ruc-mcp:latest`
+
+### Release checklist
+
+Before tagging:
+
+1. Ensure CI is green on `main`.
+2. Confirm GitHub Actions has permission to write packages.
+3. Confirm the package visibility plan (public or private) for GHCR.
+4. Update any release notes/changelog text you want published with the tag.
+
+Release steps:
+
+1. Pull latest `main`.
+2. Create and push a version tag (`vX.Y.Z`).
+3. Wait for `Publish Docker image to GHCR` to complete.
+4. Verify image tags exist in GHCR (`vX.Y.Z`, `X.Y.Z`, and `latest`).
+
+Post-release verification:
+
+1. Pull the new image locally.
+2. Run the container with a sample MCP invocation.
+3. Confirm your client config references the intended tag.
+
 ## Docker image
 
 This repository carries the Docker build recipe for the MCP server. The intended workflow is to build the image locally or in CI, then have VS Code launch the prebuilt image. This repository is not intended to contain pre-built images.
