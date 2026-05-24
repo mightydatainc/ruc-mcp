@@ -4,7 +4,7 @@
 >
 > Foundation model developers keep training LLMs to follow user instructions more faithfully. They expend untold gigajoules of energy and eons of CPU/GPU time trying to get neural networks &mdash; fundamentally fickle probabilistic beasts by their very nature &mdash; to execute steps in the order they're given, and to refrain from getting distracted, prematurely declaring completion, or outright inventing completely new un-asked-for operations.
 >
-> This is a strange thing to optimize for.
+> This is a silly thing to optimize for.
 >
 > **We already have machines that follow instructions exactly, repeatably, and tirelessly. They are called computers.**
 >
