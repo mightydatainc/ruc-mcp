@@ -58,6 +58,8 @@ In practice, that usually means:
 
 ## Installation Guide
 
+The following instructions presume some familiarity with command-line tools. Fortunately, even if you don't have this familiarity yourself, your AI agent does! If you're reading this, and you don't know how to perform some of these steps, tell your agent: "Help me with following the Installation Guide at https://github.com/Mighty-Data-Inc/ruc-mcp". It'll know what to do.
+
 ### Prerequisites
 
 You will need Docker installed to run RUC.
@@ -75,10 +77,6 @@ Install Docker using the guide for your operating system:
 
 ### Download
 
-Download the Docker image from:
-
-- `ghcr.io/mighty-data-inc/ruc-mcp`
-
 Using Docker, pull the image with:
 
 ```bash
@@ -89,7 +87,7 @@ docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
 
 #### VS Code
 
-Open your VS Code **global** MCP configuration (Command Palette → `MCP: Open User Configuration`) and add the following server entry:
+Open your VS Code **global** MCP configuration (Command Palette (open with Control-Shift-P) → `MCP: Open User Configuration`) and add the following server entry:
 
 ```json
 {
@@ -115,9 +113,7 @@ Open your VS Code **global** MCP configuration (Command Palette → `MCP: Open U
 
 VS Code will use your global MCP configuration and make the "Render Unto Caesar" MCP server available to GitHub Copilot and other MCP-aware extensions. The server runs via Docker, mounting your workspace folder into the container at `/workspace` so that RUC can read and write your local files.
 
-Make sure you have [pulled the Docker image](#docker-image) before starting the server.
-
-If you intentionally prefer workspace-scoped configuration, this repository includes `.vscode/mcp.json` as a reference example; the recommended default setup is global configuration.
+For best results, make sure you have [pulled the Docker image](#docker-image) before starting the server. If you haven't first pulled the Docker image, that's okay &mdash; VS Code will pull it for you on its first run, which might delay startup of "Render Unto Caesar" by a minute or two, just that first time.
 
 #### Cursor
 
