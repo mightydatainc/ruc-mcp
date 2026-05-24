@@ -38,7 +38,7 @@ function activate(context) {
       // Use the published GHCR image for the server runtime.
       args.push("ghcr.io/mighty-data-inc/ruc-mcp:latest");
 
-      currentPackageVersionNumber = require("./package.json").version;
+      const currentPackageVersionNumber = require("./package.json").version;
 
       // One MCP server entry exposed by this extension.
       //

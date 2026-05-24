@@ -26,6 +26,14 @@
     "@vscode/vsce": "^3.6.2"
   },
   "main": "./extension.js",
+  "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "mighty-data-inc.ruc-mcp-provider",
+        "label": "Render Unto Caesar"
+      }
+    ]
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
