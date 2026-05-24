@@ -41,6 +41,24 @@ That is exactly where LLMs are weakest.
 
 RUC exists to let the LLM serve as the interface and semantic engine, while giving the procedural work back to code.
 
+## Who this is for
+
+RUC is built for people who are comfortable asking for work in plain language, but still need reliable execution on real files.
+
+In practice, that usually means:
+
+- Product leaders and PMs working with large CSV or spreadsheet exports.
+- Analysts and operations teams who run repeated cleanup, classification, and normalization tasks.
+- Domain owners and data stewards who are accountable for data quality outcomes.
+- Engineers and AI power users supporting non-engineering teammates in VS Code.
+
+### Example situations in which RUC would be really handy
+
+1. A PM needs to triage 1,700 support feedback tickets before a roadmap review.
+2. A financial analyst has the transcripts of hundreds of earnings calls. The analyst needs to populate a spreadsheet detailing which company had the call, what date the call occurred on, who was on it, what key metrics were discussed, and what the values of those metrics were.
+3. A regional sales manager needs to sort 7,000 free-text customer survey comments into bins based on what features of the product each customer described most prominently.
+4. A national advertising executive wants to create custom copy for an ad to run on a county-by-county basis for all 3,144 counties in the United States.
+5. An engineer is helping non-engineering teammates run recurring data correction workflows, involving imputation of missing data, cleanup of messy fields, etc.
 
 ## Status
 
@@ -92,4 +110,4 @@ This keeps MCP startup fast and predictable because VS Code only launches the co
   - VS Code doesn't support sampling tool calls anyway
   - Sampling tool support should be conditional
     - Structured JSON is currently conditional anyway
-
+- Possibly use WebAssembly instead of Docker?
