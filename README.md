@@ -2,7 +2,7 @@
 
 > **If you've built a machine whose whole purpose is to be less machine-like, but you still ask it to do machine-like things, you're going to have a bad time.**
 >
-> Foundation model developers keep training LLMs to follow user instructions more faithfully. They expend untold gigajoules of energy and eons of CPU/GPU time trying to get neural networks -- fundamentally unpredictable probabilistic beasts -- to execute steps in the order they're given, and to refrain from getting distracted, prematurely declaring completion, or outright inventing completely new un-asked-for operations.
+> Foundation model developers keep training LLMs to follow user instructions more faithfully. They expend untold gigajoules of energy and eons of CPU/GPU time trying to get neural networks &mdash; fundamentally fickle probabilistic beasts by their very nature &mdash; to execute steps in the order they're given, and to refrain from getting distracted, prematurely declaring completion, or outright inventing completely new un-asked-for operations.
 >
 > This is a strange thing to optimize for.
 >
