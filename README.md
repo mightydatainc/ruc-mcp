@@ -198,6 +198,7 @@ This publishes the following tags to GHCR:
 
 ## Status
 
+2026-05-24 &mdash; v0.1.2 Added libraries for handling Excel files, HTML, PDFs, etc.
 2026-05-23 &mdash; First release: v0.1.0 published to GitHub Container Repository (GHCR).
 
 ### Future expansions
