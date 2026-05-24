@@ -56,6 +56,75 @@ In practice, that usually means:
 4. A national advertising executive wants to create custom copy for an ad to run on a county-by-county basis for all 3,144 counties in the United States.
 5. An engineer is helping non-engineering teammates run recurring data correction workflows, involving imputation of missing data, cleanup of messy fields, etc.
 
+## Installation Guide
+
+### Prerequisites
+
+You will need Docker installed to run RUC.
+
+RUC is an [MCP](https://modelcontextprotocol.io/) server that runs inside a Docker container. If these concepts are new, these introductions can help:
+
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/): a communication standard that allows "hosts" (like VS Code, or your Claude Desktop executable) to load third-party tool systems (like RUC) and inform their LLMs (either cloud-based or running locally) about the capabilities that these tools offer them, and to invoke said tools upon the LLM's request.
+- [Docker](https://www.docker.com/): a lightweight virtualization system that allows you to run mini-computers as simulations inside your real computer (more or less). Great for things like security, dependency management, and portability.
+
+Install Docker using the guide for your operating system:
+
+- [Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
+- [Mac](https://docs.docker.com/desktop/setup/install/mac-install/)
+- [Linux](https://docs.docker.com/engine/install/)
+
+### Download
+
+Download the Docker image from:
+
+- `ghcr.io/mighty-data-inc/ruc-mcp`
+
+Using Docker, pull the image with:
+
+```bash
+docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
+```
+
+### Integrating With Your AI Agent
+
+#### VS Code
+
+Open your VS Code **global** MCP configuration (Command Palette → `MCP: Open User Configuration`) and add the following server entry:
+
+```json
+{
+  "servers": {
+    "Render Unto Caesar": {
+      "type": "stdio",
+      "command": "docker",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e",
+        "RUC_MCP_LOG_LEVEL=DEBUG",
+        "-v",
+        "${workspaceFolder}:/workspace",
+        "ghcr.io/mighty-data-inc/ruc-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+VS Code will use your global MCP configuration and make the "Render Unto Caesar" MCP server available to GitHub Copilot and other MCP-aware extensions. The server runs via Docker, mounting your workspace folder into the container at `/workspace` so that RUC can read and write your local files.
+
+Make sure you have [pulled the Docker image](#docker-image) before starting the server.
+
+If you intentionally prefer workspace-scoped configuration, this repository includes `.vscode/mcp.json` as a reference example; the recommended default setup is global configuration.
+
+#### Cursor
+
+#### Claude Desktop
+
+#### Codex
+
 
 ## CI and release automation
 
@@ -105,9 +174,15 @@ Post-release verification:
 
 ## Docker image
 
-This repository carries the Docker build recipe for the MCP server. The intended workflow is to build the image locally or in CI, then have VS Code launch the prebuilt image. This repository is not intended to contain pre-built images.
+This repository carries the Docker build recipe for the MCP server. The intended user workflow is to pull the image from GHCR, then have VS Code launch that pulled image.
 
-Build the image with:
+Pull the image with:
+
+```bash
+docker pull ghcr.io/mighty-data-inc/ruc-mcp:latest
+```
+
+If you are developing this repository locally and want to build your own image, use:
 
 ```bash
 docker build -t mightydatainc/ruc-mcp:local . --no-cache
@@ -115,7 +190,7 @@ docker build -t mightydatainc/ruc-mcp:local . --no-cache
 
 (The --no-cache flag is optional. When specified, Docker will rebuild the image from scratch. If omitted, Docker will build atop an existing image if one is present.)
 
-The workspace MCP configuration in `.vscode/mcp.json` expects that local tag and starts the server with `docker run --rm -i mightydatainc/ruc-mcp:local`.
+The MCP configuration should reference the pulled image tag and start the server with `docker run --rm -i ghcr.io/mighty-data-inc/ruc-mcp:latest`.
 
 This keeps MCP startup fast and predictable because VS Code only launches the container; it does not rebuild the image each time the server starts.
 
