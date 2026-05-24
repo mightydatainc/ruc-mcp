@@ -38,6 +38,8 @@ function activate(context) {
       // Use the published GHCR image for the server runtime.
       args.push("ghcr.io/mighty-data-inc/ruc-mcp:latest");
 
+      currentPackageVersionNumber = require("./package.json").version;
+
       // One MCP server entry exposed by this extension.
       //
       // version meaning in this object:
@@ -45,7 +47,7 @@ function activate(context) {
       // - It is not the Docker image tag and does not control which image
       //   Docker pulls.
       //
-      // Why version is pinned to a semver number instead of "latest":
+      // Why version is pinned to the package semver number instead of "latest":
       // - "latest" is mutable and not a stable version identifier.
       // - A fixed string gives deterministic change detection behavior.
       // - Bump this when you intentionally change the server definition
@@ -54,7 +56,7 @@ function activate(context) {
         label: "Render Unto Caesar",
         command: "docker",
         args,
-        version: "0.1.0",
+        version: currentPackageVersionNumber,
       });
 
       return [serverDefinition];
