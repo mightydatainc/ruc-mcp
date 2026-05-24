@@ -21,7 +21,8 @@
   ],
   "scripts": {
     "build": "npm run package:vsix",
-    "package:vsix": "node -e \"require('fs').mkdirSync('build',{recursive:true})\" && vsce package --out build/ruc-mcp-server.vsix",
+    "install": "code --install-extension ./build/ruc-mcp-server.vsix",
+    "package:vsix": "node -e \"require('fs').mkdirSync('build',{recursive:true})\" && vsce package --out ./build/ruc-mcp-server.vsix",
     "publish": "vsce publish"
   },
   "devDependencies": {
