@@ -1,10 +1,11 @@
 {
   "name": "ruc-mcp-server",
   "displayName": "Render Unto Caesar (MCP Server)",
-  "description": "Combine semantic judgment with procedural rigor. Augment your chat agent with code-driven workflows.",
+  "description": "Interweave the semantic judgment of LLMs with the procedural rigor of code.",
   "version": "0.1.1",
-  "publisher": "mighty-data-inc",
+  "publisher": "Mighty Data, Inc.",
   "license": "MIT",
+  "icon": "assets/icon.png",
   "engines": {
     "vscode": "^1.100.0"
   },
