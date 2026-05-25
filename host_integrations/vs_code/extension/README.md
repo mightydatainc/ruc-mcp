@@ -1,6 +1,6 @@
 *Render Unto Caesar (RUC)* plugs into your AI agent and gives it the ability to write and run snippets of code on an as-needed basis &mdash; snippets of code that call right back to the AI agent during their execution. It effectively melds LLMs with traditional software, allowing each part of a task to be handled by the architecture that suits it best. The result is inference, judgment, and creativity that nonetheless executes methodically and reliably across long operations, large datasets, and complex processes.
 
-![screenshot](./assets/RenderUntoCaesar-perdiem.gif)
+![screenshot](https://github.com/mightydatainc/ruc-mcp/raw/main/assets/RenderUntoCaesar-perdiem.gif)
 
 ## Deterministic execution + LLM judgment in a single integrated workflow
 
