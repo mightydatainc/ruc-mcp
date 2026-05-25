@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "render-unto-caesar": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "ghcr.io/mightydatainc/ruc-mcp:0.1.6"
+      ]
+    }
+  }
+}
