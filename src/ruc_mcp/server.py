@@ -882,11 +882,11 @@ including listing folder contents, reading files, parsing files, and so on. (You
 have to import the corresponding libraries first.)
 
 The end result of your data exploration will be a report. This report will enumerate the
-data source (or sources) that the workflow will access. For each data source, the report will
-describe in exact detail how to access it, what format it's in, how to parse it or read it
-or iterate it, and any potential irregularities in the data. The report will also include
-samples of records from each data source, which can serve as a reference when you later
-write code to process the data.
+data source (or sources) that the workflow will access -- files, or web pages, or database
+tables, or what-have-you. For each data source, the report will describe in exact detail how
+to access it, what format it's in, how to parse it or read it or iterate it, and any potential
+irregularities in the data. The report will also include samples of records from each data source,
+which can serve as a reference when you later write code to process the data.
 
 Our conversation will occur in stages. First, I'll show you all the information I have about
 the task, the data sources, etc.
@@ -895,27 +895,21 @@ STAGE 1: REPORT PRESENTATION. I'll show you the report in its current state.
 STAGE 2: DELIBERATION. I'll ask you to perform a chain-of-thought reasoning process on your
     current understanding of the data. This stage is purely for your own benefit, so that
     you can square your thoughts and decide on what to do next.
-STAGE 3: ACTION SELECTION. I'll ask you to choose one of the following actions:
-    - AMEND_REPORT: Write an amendment to the report. This is your sole means of authoring
-        the final report. You can write as many amendments as you want, and they will be
-        combined together to form the final report. Each amendment should be a standalone
-        chunk of text that can be added to the report to improve it in some way. For example,
-        if you notice that a certain data source has some irregularities, you might write an
-        amendment describing those irregularities and how to handle them. The report 
-        grows monotonically. You may not delete or modify previous amendments; you can only
-        add new ones. If you need to change something you wrote in a previous amendment,
-        then write a new amendment describing the new knowledge or correction, and explicitly
-        call out the fact that this is a correction to a previous amendment.
-    - WRITE_CODE: Write a block of Python code that examines the data in some way. This is your
-        means of performing "hands-on" exploration of the data. You can write code to read
-        the data, to compute statistics about it, categorize it, etc. When you write a code block,
-        I will execute it in a Python environment and show you the results.
-    - FINISH: Declare that you're finished with data exploration, and that the report is complete.
-        This action ends the loop.
+STAGE 3: EXIT GATE. I'll ask you if you think the report is in a good place and we can finish, 
+    or if you want to continue exploring. If you choose to keep exploring, I'll ask you
+    to post a status update. (I may occasionally skip this step.)
+STAGE 4: WRITE CODE. You'll write a block of Python code that examines the data in some way.
+    This is your means of performing "hands-on" exploration of the data. You can write code to
+    read the data, to compute statistics about it, categorize things, enumerate things, etc. 
+    When you write a code block, I will execute it in a Python environment and show you the
+    results.
+STAGE 5: REPORT AMENDMENT. You'll write an amendment to the report describing any new
+    insights you've gleaned from the code you wrote in the previous stage. This is your means
+    of authoring the final report: one indelible amendment at a time.
 
-I might abridge portions of our conversation for the sake of brevity, so you won't necessarily
-see every single stage of every single iteration of the loop. But don't worry about that.
-Just focus on doing a good job of writing a comprehensive and accurate report.
+After the last stage, I will erase your memory of this iteration of the loop, and will return
+you to Stage 1, where I'll show you the report again, amended with whatever you had added in
+the previous loop.
 """
 
     convo_base: list[str] = json.loads(json.dumps(convo))
@@ -926,7 +920,10 @@ Just focus on doing a good job of writing a comprehensive and accurate report.
         if report:
             convo.append(
                 "STAGE 1: REPORT PRESENTATION. "
-                "Here is the report as it currently stands:\n\n---\n\n" + report
+                "Here is the report as it currently stands:\n\n---\n\n"
+                + "```report\n"
+                + report
+                + "\n```"
             )
         else:
             convo.append(
@@ -965,66 +962,34 @@ task right now.
                 "LLM returned no text in response to the data exploration deliberation prompt."
             )
 
+        convo.pop()  # Remove the full deliberation prompt
+        convo.append("Perform Stage 2: DELIBERATION")
         convo.append("===\nASSISTANT REPLIED\n===\n\n" + s_deliberation.text)
-        convo_base.append("===\nASSISTANT REPLIED\n===\n\n" + s_deliberation.text)
 
         convo.append("""
-STAGE 3: ACTION SELECTION.
-What would you like to do next? Talk it over with yourself, and then choose one of the 
-following actions:
-- AMEND_REPORT: Write an amendment to the report.
-- WRITE_CODE: Write a block of Python code that examines the data in some way, or performs
-    some tentative or exploratory processing on the data.
-- FINISH: Declare that you're finished with data exploration, and that the report is complete.
-When you've decided on an option, write the words `ACTION_SELECTED: <chosen action>`,
-where <chosen action> is one of the three options listed above. Make sure that
-`ACTION_SELECTED: <chosen action>` on its own line, and is written in all caps, e.g.:
-ACTION_SELECTED: AMEND_REPORT
+STAGE 3: EXIT GATE.
+Now that you've had a chance to deliberate and talk through your thoughts, it's time to decide
+whether or not you think the report is sufficiently detailed such that we can hand it off
+to a programmer to write code based on it, or if you want to continue exploring and fleshing
+out the report.
 
-If you chose WRITE_CODE, then after writing `ACTION_SELECTED: WRITE_CODE`, also write a block
-of Python code enclosed in triple backticks labeled "```python". IMPORTANT: DO NOT PRINT TO
-STDOUT IN THIS CODE BLOCK. Instead, append your output to a string variable called
-`data_exploration_log`. This variable will be initialized as an empty string at the beginning
-of your code block. I will execute your code block in a Python environment and then show you
-the contents of `data_exploration_log`. This is how you should produce output from your
-code block, since you won't have access to standard output when your code block is executed.
-Try to write your code defensively -- be mindful of things like looping over contents of files
-when you don't know their length, and so on. You don't want to accidentally write an infinite
-loop that appends to `data_exploration_log`, or getting stuck on a locked resource or something.
-Remember, you don't have to actually *do* the requested workflow task yet -- you're just
-exploring for now.  Remember that you aren't being asked to write the final code that will 
-ultimately perform the requested task; this is just for exploration and learning purposes.
-Just be careful not to accidentally screw up the data while you're exploring it, e.g. by
-stomping the data files or something. Keep your operations non-destructive.
+Deliberate on this question with yourself. Weigh the pros and cons of each option. Consider how
+much you have learned about the data so far, and how much you still have to learn. Weigh it
+against the fact that you don't want to get stuck in an infinite loop of exploration, and that
+at some point you need to just bite the bullet and say, "This is good enough."
 
-If you chose AMEND_REPORT, then after writing `ACTION_SELECTED: AMEND_REPORT`, also write a
-text block enclosed in triple backticks labeled "```reportamendment". This block should contain
-the text of your amendment to the report. I will copy-paste this onto the end of the report,
-so it should be written in a way that makes sense as an addition to the existing report.
-""")
+When you're done discussing the matter with yourself, emit either the words
+REPORT READY or FURTHER EXPLORATION NEEDED, just like that, in all caps, on a line by itself.
+If you emit REPORT READY, then I'll take that as a signal that you're done with exploration
+and that the report is ready to present to the programming agent.
 
-        s_action = await ctx.sample(
-            messages=convo,
-            system_prompt=system_prompt,
-            max_tokens=20_000,
-        )
-        if not s_action.text:
-            await ctx.warning(
-                "LLM returned no text in response to the data exploration action selection prompt. "
-                "I'll just prompt it again and hope for a better result this time."
-            )
-            continue
+---
 
-        if "ACTION_SELECTED: FINISH" in s_action.text:
-            # This is our exit point from the data exploration loop!
-            return report
-
-        # Produce a status update.
-        convo.append("===\nASSISTANT REPLIED\n===\n\n" + s_action.text)
-        convo.append("""
-In order to keep the user updated about what you're doing and to make sure you haven't frozen
-or gotten stuck, please provide a status update to explain the action you're about to
-perform. This status update should be a sentence fragment, only a handful of words long.
+EMITTING STATUS WITH FURTHER EXPLORATION NEEDED:
+                     
+If you emit FURTHER EXPLORATION NEEDED, then I have an additional request from you:
+Please provide a brief status update to explain what you plan to explore next. This
+status update should be a very short sentence fragment, only a handful of words long.
 
 It should look something like this:
 STATUS: Determining what version of Word quarterly_earnings.doc is in
@@ -1055,21 +1020,32 @@ records in customers.csv". Instead, say, "Determining number of records in custo
 Don't say, "Amending report to document 27 records with missing fields in orders.json".
 Instead, say, "27 records with missing fields in orders.json".
 
-Emit your reply as a line that starts with "STATUS:", followed by your status update.
+Emit your status as a line that starts with "STATUS:", followed by your status update.
 """)
-        status_update = await ctx.sample(
+        s_exit_gate = await ctx.sample(
             messages=convo,
             system_prompt=system_prompt,
-            max_tokens=1000,
+            max_tokens=20_000,
         )
-        if not status_update.text:
-            await ctx.warning(
-                "LLM returned no text in response to the data exploration status update prompt. "
+        if not s_exit_gate.text:
+            raise ValueError(
+                "LLM returned no text in response to the data exploration exit gate prompt."
             )
-        else:
-            status_text = status_update.text.strip()
-            if "STATUS:" in status_text:
-                status_text = status_text.split("STATUS:", 1)[1].strip()
+        if not "FURTHER EXPLORATION NEEDED" in s_exit_gate.text:
+            # This is our exit point from the data exploration loop!
+            return report
+
+        if not "REPORT READY" in s_exit_gate.text:
+            await ctx.warning(
+                "LLM did not explicitly indicate whether the report is ready or if "
+                "further exploration is needed. "
+                "Here's what it said instead: " + s_exit_gate.text
+            )
+        convo.pop()  # Remove the full exit gate prompt
+
+        # Read status update, if it exists, and report it to the user.
+        if "STATUS:" in s_exit_gate.text:
+            status_text = s_exit_gate.text.split("STATUS:", 1)[1].strip()
             if "\n" in status_text:
                 status_text = status_text.split("\n", 1)[0].strip()
             await ctx.report_progress(
@@ -1077,63 +1053,127 @@ Emit your reply as a line that starts with "STATUS:", followed by your status up
                 total=None,
                 message=status_text,
             )
-
-        if "ACTION_SELECTED: AMEND_REPORT" in s_action.text:
-            amendment = _extract_labeled_code_block(s_action.text, "reportamendment")
-            if not amendment:
-                await ctx.warning(
-                    "LLM indicated that it wanted to amend the report, "
-                    "but did not include a report amendment block."
-                )
-                continue
-            report += "\n\n" + amendment.strip()
-
-        elif "ACTION_SELECTED: WRITE_CODE" in s_action.text:
-            code = _extract_labeled_code_block(s_action.text, "python")
-            if not code:
-                await ctx.warning(
-                    "LLM indicated that it wanted to write code, "
-                    "but did not include a Python code block."
-                )
-                continue
-
-            code = 'data_exploration_log = ""\n\n' + code.strip()
-
-            # Execute the code and capture its output.
-            local_namespace: dict[str, Any] = {}
-
-            try:
-                exec(code, {}, local_namespace)
-                if "data_exploration_log" not in local_namespace:
-                    raise ValueError(
-                        "The Python code block that the LLM provided did not define "
-                        "a variable called `data_exploration_log`."
-                    )
-                s_data_exploration_log = local_namespace["data_exploration_log"]
-                result_str = (
-                    json.dumps(s_data_exploration_log, indent=2)
-                    if not isinstance(s_data_exploration_log, str)
-                    else s_data_exploration_log
-                )
-            except Exception as e:
-                result_str = f"Error executing code block: {e}"
-                # Also provide a stack trace for debugging purposes.
-                result_str += "\n\nStack trace:\n" + traceback.format_exc()
-
-            # Append the code itself and its results to the conversation,
-            # so that the LLM can refer to them in future deliberation and action selection.
-            convo_base.append(
-                "===\nLLM-PROVIDED CODE BLOCK\n===\n\n```python\n"
-                + code.strip()
-                + "\n```\n\n===\nOUTPUT OF LLM-PROVIDED CODE\n===\n\n"
-                + result_str
-            )
-
         else:
             await ctx.warning(
-                "LLM did not select a valid action. Here's what it said:\n"
-                + s_action.text
+                "LLM did not provide a status update after indicating that "
+                "further exploration is needed."
             )
+
+        convo.append("""
+STAGE 4: WRITE CODE
+
+In this stage, you will write a block of Python code that examines the data in some way,
+or performs some tentative or exploratory processing on the data.
+
+First, talk about how you will write your code. Provide a high-level architectural
+description of the code you plan to write, and what it will achieve.
+
+Then, write a block of Python code enclosed in triple backticks labeled "```python".
+
+IMPORTANT: DO NOT PRINT TO STDOUT IN THIS CODE BLOCK.
+Instead, append your output to a string variable called `data_exploration_log`. This variable
+will be initialized as an empty string at the beginning of your code block. I will execute your
+code block in a Python environment and then show you the contents of `data_exploration_log`.
+
+Try to write your code defensively. Be mindful of things like looping over contents of files
+when you don't know their length, and so on. You don't want to accidentally write an infinite
+loop that appends infinite data to `data_exploration_log`, or getting stuck on a locked resource
+or something.
+
+CONSTRAIN YOUR CODE SOLELY TO EXPLORING THE DATA, NOT FULFILLING THE FINAL TASK.
+Remember, you don't have to actually *do* the requested workflow task yet. You're just
+exploring for now.  Remember that you aren't being asked to write the final code that will 
+ultimately perform the requested task; this is just for exploration and learning purposes.
+Just be careful not to accidentally screw up the data while you're exploring it, e.g. by
+stomping the data files or something. Keep your operations non-destructive.
+""")
+        s_writecode = await ctx.sample(
+            messages=convo,
+            system_prompt=system_prompt,
+            max_tokens=20_000,
+        )
+        if not s_writecode.text:
+            await ctx.warning(
+                "LLM returned no text in response to the data exploration code writing prompt. "
+                "I'll just prompt it again and hope for a better result this time."
+            )
+            continue
+
+        convo.pop()  # Remove the full code writing prompt
+        convo.append("STAGE 4: WRITE CODE")
+        convo.append("===\nASSISTANT REPLIED\n===\n\n" + s_writecode.text)
+
+        code = _extract_labeled_code_block(s_writecode.text, "python")
+        if not code:
+            await ctx.warning(
+                "LLM indicated that it wanted to write code, "
+                "but did not include a Python code block."
+            )
+            continue
+
+        code = 'data_exploration_log = ""\n\n' + code.strip()
+
+        # Execute the code and capture its output.
+        local_namespace: dict[str, Any] = {}
+
+        result_str: str = ""
+        try:
+            exec(code, {}, local_namespace)
+            if "data_exploration_log" not in local_namespace:
+                raise ValueError(
+                    "The Python code block that the LLM provided did not define "
+                    "a variable called `data_exploration_log`."
+                )
+            s_data_exploration_log = local_namespace["data_exploration_log"]
+            result_str = (
+                json.dumps(s_data_exploration_log, indent=2)
+                if not isinstance(s_data_exploration_log, str)
+                else s_data_exploration_log
+            )
+        except Exception as e:
+            result_str = f"Error executing code block: {e}"
+            # Also provide a stack trace for debugging purposes.
+            result_str += "\n\nStack trace:\n" + traceback.format_exc()
+
+        convo.append(f"Execution result:\n\n```\n{result_str}\n```\n\n")
+
+        convo.append("""
+STAGE 5: REPORT AMENDMENT
+Now that you've had a chance to write some code and see the results, it's time to amend
+the report with any new insights you've gleaned. What did you learn from this code
+execution? What new information did you get about the data? Did you find any quirks or
+gotchas or irregularities in the data? Did you find anything that surprised you, or that
+contradicted your previous understanding of the data?
+
+Plan out what you want to add to the report. When you're done discussing the matter,
+write a report amendment. This should be a block of text that you want to add to the report,
+to flesh it out with new information. The report amendment should be enclosed in triple backticks
+labeled "```reportamendment". The contents of this "```reportamendment" block will be appended
+to the report, and will become a permanent part of the report.
+""")
+        s_report_amendment = await ctx.sample(
+            messages=convo,
+            system_prompt=system_prompt,
+            max_tokens=20_000,
+        )
+        if not s_report_amendment.text:
+            await ctx.warning(
+                "LLM returned no text in response to the data exploration report "
+                "amendment prompt. "
+                "I'll just prompt it again and hope for a better result this time."
+            )
+            continue
+
+        report_amendment = _extract_labeled_code_block(
+            s_report_amendment.text, "reportamendment"
+        )
+        if not report_amendment:
+            await ctx.warning(
+                "LLM indicated that it wanted to amend the report, "
+                "but did not include a report amendment block."
+            )
+            continue
+        report += "\n\n" + report_amendment.strip()
 
 
 async def _repair_workflow_code(
