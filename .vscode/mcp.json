@@ -1,6 +1,6 @@
 {
   "servers": {
-    "Render Unto Caesar": {
+    "Render Unto Caesar (\"RUC\")": {
       "type": "stdio",
       "command": "docker",
       "cwd": "${workspaceFolder}",
