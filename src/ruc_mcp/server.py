@@ -1021,6 +1021,18 @@ Don't say, "Amending report to document 27 records with missing fields in orders
 Instead, say, "27 records with missing fields in orders.json".
 
 Emit your status as a line that starts with "STATUS:", followed by your status update.
+
+---
+
+!IMPORTANT: The goal of data exploration is to understand the data well enough that you can
+hand it over to a programmer and say, "Here's what you need to know about the data in order
+to perform the task requested at the beginning of this conversation."
+The goal is **not** to actually perform the final requested task right now.
+DO NOT ATTEMPT TO PERFORM THE FINAL TASK RIGHT NOW. You should just be exploring the data
+and learning about it, not trying to do the actual thing that we need to do with the data.
+If you feel like we know enough about the data to actually perform the final task, then
+the right thing to do is NOT to perform the final task, but rather to emit "REPORT READY"
+and let the programming agent handle the actual implementation of it.
 """)
         s_exit_gate = await ctx.sample(
             messages=convo,
@@ -1033,7 +1045,7 @@ Emit your status as a line that starts with "STATUS:", followed by your status u
             )
         if not "FURTHER EXPLORATION NEEDED" in s_exit_gate.text:
             # This is our exit point from the data exploration loop!
-            return report
+            break
 
         if not "REPORT READY" in s_exit_gate.text:
             await ctx.warning(
@@ -1079,13 +1091,19 @@ Try to write your code defensively. Be mindful of things like looping over conte
 when you don't know their length, and so on. You don't want to accidentally write an infinite
 loop that appends infinite data to `data_exploration_log`, or getting stuck on a locked resource
 or something.
+                     
+Be careful not to accidentally screw up the data while you're exploring it, e.g. by
+stomping the data files or something. Keep your operations non-destructive.
 
-CONSTRAIN YOUR CODE SOLELY TO EXPLORING THE DATA, NOT FULFILLING THE FINAL TASK.
+IMPORTANT: DO NOT FULFILL THE FINAL TASK. THAT IS NOT YOUR JOB RIGHT NOW.
 Remember, you don't have to actually *do* the requested workflow task yet. You're just
 exploring for now.  Remember that you aren't being asked to write the final code that will 
 ultimately perform the requested task; this is just for exploration and learning purposes.
-Just be careful not to accidentally screw up the data while you're exploring it, e.g. by
-stomping the data files or something. Keep your operations non-destructive.
+In fact, tell ya what. If you feel like you know enough about the data to actually perform
+the final task, then don't even bother writing a Python block. Emit the words
+"PERFORM FINAL TASK", just like that, in all caps, on a line by itself, and I'll
+take that as a signal that we are ready to exit the data exploration loop and 
+hand the report off to the programming agent.
 """)
         s_writecode = await ctx.sample(
             messages=convo,
@@ -1098,6 +1116,10 @@ stomping the data files or something. Keep your operations non-destructive.
                 "I'll just prompt it again and hope for a better result this time."
             )
             continue
+
+        if "PERFORM FINAL TASK" in s_writecode.text:
+            # This is another exit point from the data exploration loop!
+            break
 
         convo.pop()  # Remove the full code writing prompt
         convo.append("STAGE 4: WRITE CODE")
@@ -1174,6 +1196,8 @@ to the report, and will become a permanent part of the report.
             )
             continue
         report += "\n\n" + report_amendment.strip()
+
+    return report
 
 
 async def _repair_workflow_code(
