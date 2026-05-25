@@ -316,8 +316,16 @@ def _extract_labeled_code_block(response_text: str, label: str) -> str:
 
     pattern = rf"```{re.escape(label)}\s*(.*?)```"
     labeled_blocks = re.findall(pattern, response_text, flags=re.IGNORECASE | re.DOTALL)
+    retval_block = ""
     if labeled_blocks:
-        return labeled_blocks[-1].strip()
+        retval_block = labeled_blocks[-1].strip()
+
+    if retval_block.startswith(label):
+        # The AI might have included the label inside the code block by mistake. If so, remove it.
+        retval_block = retval_block[len(label) :].strip()
+
+    if retval_block:
+        return retval_block
 
     raise ValueError(
         f"Sampling response did not include a fenced code block labeled '{label}'."
@@ -900,12 +908,8 @@ STAGE 3: ACTION SELECTION. I'll ask you to choose one of the following actions:
         call out the fact that this is a correction to a previous amendment.
     - WRITE_CODE: Write a block of Python code that examines the data in some way. This is your
         means of performing "hands-on" exploration of the data. You can write code to read
-        the data, to compute statistics about it, to visualize it, or to do anything else that
-        might help you understand it better. You can write as many code blocks as you want,
-        and they can be as long or as short as you want. Each code block should be a standalone
-        chunk of Python code that can be executed independently. When you write a code block, I
-        will execute it in a Python environment and show you the results. This can be a very
-        powerful tool for understanding the data, so use it often and creatively!
+        the data, to compute statistics about it, categorize it, etc. When you write a code block,
+        I will execute it in a Python environment and show you the results.
     - FINISH: Declare that you're finished with data exploration, and that the report is complete.
         This action ends the loop.
 
@@ -934,13 +938,22 @@ Just focus on doing a good job of writing a comprehensive and accurate report.
 STAGE 2: DELIBERATION. 
 Take some time to think through your current understanding of the data.
 Discuss the following topics with yourself.
+
 - What you know about the data so far, based on the information you've been given and any
     exploration you've done up to this point.
+
 - What you still need to learn about the data.
+
 - What's captured so far in the report, and whether it's accurate and comprehensive.
+
 - What still needs to be added to the report, and how you'll go about learning that information.
+
 I don't need you to decide on an action or to write any code just yet.
 Just talk through your thoughts.
+                     
+REMINDER: The goal of data exploration is to understand the data well enough that you could
+write code to process it later. The goal is **not** to actually perform the final requested
+task right now.
 """)
         s_deliberation = await ctx.sample(
             messages=convo,

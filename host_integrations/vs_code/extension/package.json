@@ -1,8 +1,8 @@
 {
   "name": "ruc-mcp-server",
   "displayName": "Render Unto Caesar (MCP Server)",
-  "description": "Interweave the semantic judgment of LLMs with the procedural rigor of code.",
-  "version": "0.1.1",
+  "description": "Run the contextual flexibility of AI with the procedural rigor of code",
+  "version": "0.1.2",
   "publisher": "mightydatainc",
   "license": "MIT",
   "icon": "assets/render-unto-caesar-128-tight.png",
