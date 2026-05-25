@@ -57,7 +57,7 @@ In practice, that usually means:
 3. A regional sales manager needs to sort 7,000 free-text customer survey comments into bins based on what features of the product each customer described most prominently.
 4. A national advertising executive wants to create custom copy for an ad to run on a county-by-county basis for all 3,144 counties in the United States.
 
-## Installation Guide
+## Installation guide
 
 The following instructions presume some familiarity with command-line tools. Fortunately, even if you don't have this familiarity yourself, your AI agent does! If you're reading this, and you don't know how to perform some of these steps, tell your agent: "Help me with following the Installation Guide at https://github.com/mightydatainc/ruc-mcp". It'll know what to do.
 
@@ -76,57 +76,17 @@ Install Docker using the guide for your operating system:
 - [Mac](https://docs.docker.com/desktop/setup/install/mac-install/)
 - [Linux](https://docs.docker.com/engine/install/)
 
-### Download
-
-Using Docker, pull the image with:
-
-```bash
-docker pull ghcr.io/mightydatainc/ruc-mcp:latest
-```
-
-### Integrating With Your AI Agent
+### Integrating with your AI agent
 
 #### VS Code
 
-Recommended: install the VS Code extension so users do not have to edit MCP config JSON.
+Install the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=mightydatainc.ruc-mcp-server).
 
 1. Open Extensions in VS Code.
 2. Search for "Render Unto Caesar".
-3. Install the extension published by `mightydatainc`.
+3. Install the extension published by `mightydatainc`. This might take a few minutes as it downloads the Docker image. (It's not particularly large, but it can still take a while, presumably due to security checks, registry updates, etc.)
 4. Reload VS Code.
 5. Run `MCP: List Servers` and verify "Render Unto Caesar" appears.
-
-The extension registers and launches the MCP server definition automatically.
-
-Manual configuration fallback (only if extension installation is unavailable):
-
-Open your VS Code **global** MCP configuration by opening your Command Palette (Control-Shift-P) and typing `MCP: Open User Configuration`. Add the following server entry:
-
-```json
-{
-  "servers": {
-    "Render Unto Caesar": {
-      "type": "stdio",
-      "command": "docker",
-      "cwd": "${workspaceFolder}",
-      "args": [
-        "run",
-        "--rm",
-        "-i",
-        "-e",
-        "RUC_MCP_LOG_LEVEL=DEBUG",
-        "-v",
-        "${workspaceFolder}:/workspace",
-        "ghcr.io/mightydatainc/ruc-mcp:latest"
-      ]
-    }
-  }
-}
-```
-
-VS Code will use your global MCP configuration and make the "Render Unto Caesar" MCP server available to GitHub Copilot and other MCP-aware extensions. The server runs via Docker, mounting your workspace folder into the container at `/workspace` so that RUC can read and write your local files.
-
-For best results, make sure you have [pulled the Docker image](#docker-image) before starting the server. If you haven't first pulled the Docker image, that's okay &mdash; VS Code will pull it for you on its first run, which might delay startup of "Render Unto Caesar" by a minute or two, just that first time.
 
 #### Cursor
 
@@ -141,6 +101,16 @@ TBD
 TBD
 
 ## Development
+
+### Prerequisites
+
+### Optional: Pull the Docker image from the GitHub Container Repository (GHCR)
+
+You probably won't need to do this yourself, because most of the installation methods do this for you automatically. But I'll provide it here for reference.
+
+```bash
+docker pull ghcr.io/mightydatainc/ruc-mcp:latest
+```
 
 ### Build the Docker image locally
 

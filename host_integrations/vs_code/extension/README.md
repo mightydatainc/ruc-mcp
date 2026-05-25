@@ -57,9 +57,19 @@ In practice, that usually means:
 
 ## Requirements
 
-- VS Code 1.100+
-- Docker installed and running
-- Access to pull the following Docker image from the GitHub Container Repository (GHCR): `ghcr.io/mightydatainc/ruc-mcp:latest`
+You will need Docker installed to run RUC.
+
+RUC is an [MCP](https://modelcontextprotocol.io/) server that runs inside a Docker container. If these concepts are new, these introductions can help:
+
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/): a communication standard that allows "hosts" (like VS Code, or your Claude Desktop executable) to load third-party tool systems (like RUC) and inform their LLMs (either cloud-based or running locally) about the capabilities that these tools offer them, and to invoke said tools upon the LLM's request.
+- [Docker](https://www.docker.com/): a lightweight virtualization system that allows you to run mini-computers as simulations inside your real computer (more or less). Great for things like security, dependency management, and portability.
+
+Install Docker using the guide for your operating system:
+
+- [Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
+- [Mac](https://docs.docker.com/desktop/setup/install/mac-install/)
+- [Linux](https://docs.docker.com/engine/install/)
+
 
 ## Development Guide
 
