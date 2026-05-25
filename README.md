@@ -2,6 +2,8 @@
 
 *Render Unto Caesar (RUC)* plugs into your AI agent and gives it the ability to write and run snippets of code on an as-needed basis &mdash; snippets of code that call right back to the AI agent during their execution. It effectively melds LLMs with traditional software, allowing each part of a task to be handled by the architecture that suits it best. The result is inference, judgment, and creativity that nonetheless executes methodically and reliably across long operations, large datasets, and complex processes.
 
+![screenshot](./assets/RenderUntoCaesar-perdiem.gif)
+
 ## Deterministic execution + LLM judgment in a single integrated workflow
 
 > **If you've built a machine whose whole purpose is to be less machine-like, but you still ask it to do machine-like things, you're going to have a bad time.**
@@ -39,7 +41,7 @@ The important part is not merely that both are available. The important part is 
 
 ## Who this is for
 
-RUC is built for people who are comfortable asking for work in plain language, but still need reliable execution on real files.
+RUC is built for business and engineering professionals who want to describe sequences of operations they want their computer to perform, and who expect the computer to carry out those operations *as a computer* rather than as some kind of Plinko game.
 
 In practice, that usually means:
 
@@ -48,13 +50,12 @@ In practice, that usually means:
 - Domain owners and data stewards who are accountable for data quality outcomes.
 - Engineers and AI power users supporting non-engineering teammates in VS Code.
 
-### Example situations in which RUC would be really handy
+### Example situations in which RUC proves useful
 
 1. A PM needs to triage 1,700 support feedback tickets before a roadmap review.
 2. A financial analyst has the transcripts of hundreds of earnings calls. The analyst needs to populate a spreadsheet detailing which company had the call, what date the call occurred on, who was on it, what key metrics were discussed, and what the values of those metrics were.
 3. A regional sales manager needs to sort 7,000 free-text customer survey comments into bins based on what features of the product each customer described most prominently.
 4. A national advertising executive wants to create custom copy for an ad to run on a county-by-county basis for all 3,144 counties in the United States.
-5. An engineer is helping non-engineering teammates run recurring data correction workflows, involving imputation of missing data, cleanup of messy fields, etc.
 
 ## Installation Guide
 
