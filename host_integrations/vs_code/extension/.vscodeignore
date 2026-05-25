@@ -13,3 +13,6 @@ build/**
 
 # Project-only files not needed at runtime
 package-lock.json
+
+# Local secrets files.
+.env
