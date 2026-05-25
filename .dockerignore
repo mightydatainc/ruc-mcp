@@ -12,3 +12,9 @@ dist
 logs
 temp_auto_generated_workflow.py
 tests
+
+# Logs and temp directories
+logs
+temp
+tempdata
+localtools
