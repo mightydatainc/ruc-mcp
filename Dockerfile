@@ -3,6 +3,9 @@
 # transitive native dependencies, which may force source builds on slim images.
 FROM python:3.12-slim
 
+# MCP Registry ownership verification label for OCI images.
+LABEL io.modelcontextprotocol.server.name="io.github.mightydatainc/ruc-mcp"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
