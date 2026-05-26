@@ -14,7 +14,7 @@ This plugin adds the Render Unto Caesar (RUC) MCP server to Cursor.
 
 ## Local test in Cursor
 
-1. Open Cursor and load this plugin from `~/.cursor/plugins/local`.
+1. Copy your plugin folder into `~/.cursor/plugins/local`
 2. Reload Cursor.
 3. Confirm the MCP server appears in Settings > Features > Model Context Protocol.
 4. In chat, ask: "Use Render Unto Caesar to summarize what this MCP server does in one sentence."
