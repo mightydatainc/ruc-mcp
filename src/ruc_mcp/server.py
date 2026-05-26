@@ -1667,5 +1667,13 @@ async def ruc_execute_semantic_code_workflow(
 def main() -> None:
     """Entrypoint for local development."""
     configure_logging()
-    logging.getLogger(__name__).info("Starting RUC MCP server over stdio")
+    logger = logging.getLogger(__name__)
+    logger.info("Starting RUC MCP server over stdio")
+    if RUC_MCP_HOST_WORKSPACE:
+        logger.info(f"RUC MCP host filesystem shared mount: {RUC_MCP_HOST_WORKSPACE}")
+    else:
+        logger.info(
+            "RUC_MCP_HOST_WORKSPACE not set. RUC MCP has no host filesystem access."
+        )
+
     mcp.run(transport="stdio")

@@ -103,6 +103,20 @@ TBD
 
 TBD
 
+#### Let your MCP client's AI figure it out
+
+This is always a fallback option. Whatever your MCP client or host might be, you can always just tell it to figure out how to launch and connect to this MCP server on its own. It might help to tell the client the following information:
+
+- RUC talks to its client over STDIO.
+- Its commandline invocation looks like this: 
+
+```bash
+docker run --rm -i \
+-e RUC_MCP_LOG_LEVEL=DEBUG \
+-e RUC_MCP_HOST_WORKSPACE=${workspaceFolder} \
+-v ${workspaceFolder}:/workspace \
+ghcr.io/mightydatainc/ruc-mcp:latest
+```
 
 ## Development
 
