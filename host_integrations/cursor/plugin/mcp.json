@@ -1,13 +1,20 @@
 {
   "mcpServers": {
-    "render-unto-caesar": {
+    "Render Unto Caesar (\"RUC\")": {
       "type": "stdio",
       "command": "docker",
+      "cwd": "${workspaceFolder}",
       "args": [
         "run",
         "--rm",
         "-i",
-        "ghcr.io/mightydatainc/ruc-mcp:0.1.6"
+        "-e",
+        "RUC_MCP_LOG_LEVEL=DEBUG",
+        "-e",
+        "RUC_MCP_HOST_WORKSPACE=${workspaceFolder}",
+        "-v",
+        "${workspaceFolder}:/workspace",
+        "ghcr.io/mightydatainc/ruc-mcp:latest"
       ]
     }
   }

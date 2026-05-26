@@ -9,7 +9,7 @@ This plugin adds the Render Unto Caesar (RUC) MCP server to Cursor.
 ## Included MCP Server
 
 - Name: render-unto-caesar
-- Image: ghcr.io/mightydatainc/ruc-mcp:0.1.6
+- Image: ghcr.io/mightydatainc/ruc-mcp:latest
 - Transport: stdio
 
 ## Local test in Cursor

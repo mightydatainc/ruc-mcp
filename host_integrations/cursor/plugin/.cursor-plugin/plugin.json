@@ -1,9 +1,10 @@
 {
   "name": "mightydatainc-ruc-mcp",
-  "version": "0.1.6",
-  "description": "Render Unto Caesar MCP server for deterministic plus semantic workflows",
+  "version": "0.1.5",
+  "description": "Procedural code workflows that outsource to AI for contextual judgment",
   "author": {
-    "name": "Mighty Data, Inc."
+    "name": "Mighty Data, Inc.",
+    "email": "ruc@mightydatainc.com"
   },
   "repository": "https://github.com/mightydatainc/ruc-mcp",
   "homepage": "https://github.com/mightydatainc/ruc-mcp",
