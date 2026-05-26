@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ruc-mcp": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "ghcr.io/mightydatainc/ruc-mcp:latest"
+      ]
+    }
+  }
+}

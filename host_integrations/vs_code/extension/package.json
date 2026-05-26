@@ -26,9 +26,6 @@
     "package:vsix": "node -e \"require('fs').mkdirSync('build',{recursive:true})\" && vsce package --out ./build/ruc-mcp-server.vsix",
     "vsce:login": "dotenv -e .env -- vsce login mightydatainc",
     "vsce:publish": "dotenv -e .env -- vsce publish",
-    "vsce:publish:patch": "dotenv -e .env -- vsce publish patch",
-    "vsce:publish:minor": "dotenv -e .env -- vsce publish minor",
-    "vsce:publish:major": "dotenv -e .env -- vsce publish major",
     "openvsx:create-namespace": "dotenv -e .env -- ovsx create-namespace mightydatainc",
     "openvsx:publish": "dotenv -e .env -- ovsx publish",
     "openvsx:publish:vsix": "dotenv -e .env -- ovsx publish ./build/ruc-mcp-server.vsix"

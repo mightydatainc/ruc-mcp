@@ -1,0 +1,24 @@
+{
+  "name": "ruc-mcp",
+  "version": "0.1.0",
+  "description": "Run the RUC MCP server from its published Docker image.",
+  "author": {
+    "name": "Mighty Data Inc"
+  },
+  "interface": {
+    "displayName": "RUC MCP",
+    "shortDescription": "Connect Codex to the RUC MCP server.",
+    "longDescription": "RUC MCP wraps the ghcr.io/mightydatainc/ruc-mcp:latest Docker image so Codex can launch the MCP server through Docker.",
+    "developerName": "Mighty Data Inc",
+    "category": "Productivity",
+    "capabilities": [
+      "MCP"
+    ],
+    "defaultPrompt": [
+      "Use RUC MCP to help with this task.",
+      "List the available RUC MCP tools.",
+      "Inspect this with the RUC MCP server."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
