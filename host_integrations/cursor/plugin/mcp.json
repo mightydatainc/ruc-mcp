@@ -3,7 +3,6 @@
     "Render Unto Caesar (\"RUC\")": {
       "type": "stdio",
       "command": "docker",
-      "cwd": "${workspaceFolder}",
       "args": [
         "run",
         "--rm",
@@ -11,9 +10,9 @@
         "-e",
         "RUC_MCP_LOG_LEVEL=DEBUG",
         "-e",
-        "RUC_MCP_HOST_WORKSPACE=${workspaceFolder}",
+        "RUC_MCP_HOST_WORKSPACE=~/.cursor/plugins/ruc-mcp/workspace",
         "-v",
-        "${workspaceFolder}:/workspace",
+        "~/.cursor/plugins/ruc-mcp/workspace:/workspace",
         "ghcr.io/mightydatainc/ruc-mcp:latest"
       ]
     }

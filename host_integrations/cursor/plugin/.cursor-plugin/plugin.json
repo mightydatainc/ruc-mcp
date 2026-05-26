@@ -9,5 +9,6 @@
   "repository": "https://github.com/mightydatainc/ruc-mcp",
   "homepage": "https://github.com/mightydatainc/ruc-mcp",
   "license": "MIT",
-  "keywords": ["mcp", "ruc", "workflow", "automation", "ai"]
+  "keywords": ["mcp", "ruc", "workflow", "automation", "ai"],
+  "logo": "assets/logo.svg"
 }
