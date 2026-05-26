@@ -60,12 +60,12 @@ mcp: fastmcp.FastMCP = fastmcp.FastMCP(
 
 RUC_PYTHON_ENVIRONMENT: str = """
 The environment you'll be running in is a python-3.12:slim Docker image, with standard 
-libraries such as `json`, `re`, `pydantic`, and so on. In addition, the environment comes installed
-with the following libraries, which may come in handy for you:
+libraries such as `json`, `re`, `pydantic`, and so on. In addition, the environment comes
+installed with the following libraries, which may come in handy for you:
 - Science and data libraries: `numpy`, `pandas`, `scipy`, `scikit-learn`, and `statsmodels`.
 - Spreadsheets: `openpyxl` for working with Excel files, and `odfpy` for OpenDocument spreadsheets.
-- Office documents: `python-docx` for MS Word, `docutils` for reStructuredText, `beautifulsoup4` for
-    HTML parsing, and `pypdf` for working with PDFs.
+- Office documents: `python-docx` for MS Word, `docutils` for reStructuredText, `beautifulsoup4`
+    for HTML parsing, `markdown-it-py` for Markdown, and `pypdf` for working with PDFs.
 
 The Docker container is sandboxed against network and filesystem access; but you
 have read/write access to the folder /workspace, which you may use for reading source data and/or
