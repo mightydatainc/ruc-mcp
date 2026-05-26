@@ -19,6 +19,9 @@ import fastmcp
 from mcp.types import SamplingMessage, TextContent
 from pydantic import Field
 
+RUC_MCP_LOG_LEVEL: str = os.getenv("RUC_MCP_LOG_LEVEL", "INFO").upper()
+RUC_MCP_HOST_WORKSPACE: str = os.getenv("RUC_MCP_HOST_WORKSPACE", "")
+
 mcp: fastmcp.FastMCP = fastmcp.FastMCP(
     name="ruc-mcp",
     instructions=(
@@ -86,7 +89,7 @@ async def execute_workflow(ctx: fastmcp.Context) -> dict:
 
 ---
 
-Your Execution Environment: python-3.12:slim Docker image with /workspace mount and scientific/data libraries
+Your Execution Environment: Sandboxed python-3.12:slim Docker container with scientific/data libraries
 
 {RUC_PYTHON_ENVIRONMENT}
 
@@ -294,7 +297,7 @@ async def TODO_PROVIDE_FUNCTION_NAME(arg: dict, ctx: fastmcp.Context) -> dict:
 
 def configure_logging() -> None:
     """Write runtime logs to a fresh file on each launch and echo to stderr."""
-    log_level_name = os.getenv("RUC_MCP_LOG_LEVEL", "INFO").upper()
+    log_level_name = RUC_MCP_LOG_LEVEL
     log_level = getattr(logging, log_level_name, logging.INFO)
     log_file_path = Path(os.getenv("RUC_MCP_LOG_FILE", "ruc-mcp.log"))
 
@@ -1397,14 +1400,23 @@ async def ruc_execute_semantic_code_workflow(
                 "the data is in (e.g. CSV, JSON, SQL). Not all tasks rely on data sources, "
                 "but those that do will require this information."
                 "\n\n"
-                "If any of the data sources are local files, keep in mind that RUC runs in a "
-                "Docker container with a shared mount point (inside the container it's mounted "
-                "at /workspace). So if you want RUC to be able to access a local file, that "
-                "file needs to be located somewhere under the shared mount point on the host "
-                "machine; and when you tell RUC where the file is, use the path as RUC will "
-                "see it inside the container (e.g. /workspace/customers.csv)."
-                "\n\n"
                 "If the task doesn't require any data sources, leave this blank."
+                "\n\n"
+                + (
+                    "If any of the data sources are local files, keep in mind that RUC runs in a "
+                    "Docker container with a shared mount point. On the host machine, this mount "
+                    f"point is at {RUC_MCP_HOST_WORKSPACE}. Inside the container, it's mounted "
+                    "at /workspace. RUC can **only** access files, either for reading or "
+                    "writing, if they are located under this shared mount. So if you want RUC to "
+                    "be able to access a local file, that file needs to be located somewhere "
+                    f"under {RUC_MCP_HOST_WORKSPACE} on the host machine; and when you tell RUC "
+                    "where the file is, use the path as RUC will see it inside the container "
+                    "(e.g. /workspace/customers.csv)."
+                    if RUC_MCP_HOST_WORKSPACE
+                    else "NOTE: RUC runs in a Docker container and does not have **any** access "
+                    "to the host machine's filesystem, so it cannot access local files."
+                    # FUTURE: Figure out how to give Docker network access, at least.
+                )
             )
         ),
     ] = None,
@@ -1414,17 +1426,27 @@ async def ruc_execute_semantic_code_workflow(
             description=(
                 "Optional. Provide instructions for how the final output should be presented, "
                 "what format it should be in, and where/how it should be delivered. For example, "
-                "do you want just a string? Do you want a JSON object? Do you want the "
-                "results written to a file? If so, what should the file be called, and where "
-                "should it be saved? Should the results overwrite an existing file, or should "
-                "they be appended to it, or should a new file be created with a unique name? "
-                "Should a file be written in-place, or would you prefer to see a list of "
-                "edits in unified diff format that you can review and apply using a diff tool? "
-                "RUC doesn't have access to your entire filesystem, but it *does* run in a "
-                "Docker container with /workspace as a mount point; so if you want it to "
-                "write to the filesystem for output, specify a path under /workspace (e.g. "
-                "/workspace/results.json)."
+                "do you want just a string? Do you want a JSON object? Describe what the output "
+                "should look like and where it should go."
                 "\n\n"
+                + (
+                    "If you want the results written to a file, bear in mind that RUC runs "
+                    "inside a sandboxed Docker container. It has a shared mount point with the "
+                    "host machine, so it can only access files located under this mount. On the "
+                    f"host, this mount is at {RUC_MCP_HOST_WORKSPACE}. Inside the container, it's "
+                    "at /workspace. So if you want RUC to write files out to the filesystem, you "
+                    "need to specify a path under /workspace (e.g. /workspace/results.json), and "
+                    "the file will appear on the host at the corresponding path under "
+                    f"{RUC_MCP_HOST_WORKSPACE}. "
+                    "Make sure to specify if you want to create a new file, or overwrite an "
+                    "existing file, or append to an existing file."
+                    if RUC_MCP_HOST_WORKSPACE
+                    else "NOTE: RUC runs in a sandboxed Docker container with **no** access "
+                    "to the host machine's filesystem. As such, it cannot write output to local "
+                    "files. Your best bet is probably to have RUC return the output as a JSON "
+                    "object directly in the MCP call."
+                )
+                + "\n\n"
                 "NOTE: For debugging purposes, you might sometimes be asked to make RUC write "
                 "the generated workflow code to a file. DO **NOT** put instructions about "
                 "writing the workflow code file in this field! Those instructions belong in "

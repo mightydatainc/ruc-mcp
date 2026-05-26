@@ -85,10 +85,17 @@ Install the [VS Code extension](https://marketplace.visualstudio.com/items?itemN
 1. Open Extensions in VS Code.
 2. Search for "Render Unto Caesar".
 3. Install the extension published by `mightydatainc`. This might take a few minutes as it downloads the Docker image. (It's not particularly large, but it can still take a while, presumably due to security checks, registry updates, etc.)
-4. Reload VS Code.
-5. Run `MCP: List Servers` and verify "Render Unto Caesar" appears.
+
+Easy as 1-2-3! 
+
+To verify that it was installed correctly, open the Command Palette (Control-Shift-P), type `MCP: List Servers`, hit Enter, and verify "Render Unto Caesar" appears.
+
 
 #### Cursor
+
+Same installation instructions as VS Code. Open the "Extensions" panel, search for "Render Unto Caesar", and hit "Install". After a few minutes, "Render Unto Caesar" should appear under `MCP: List Servers`.
+
+#### Codex
 
 TBD
 
@@ -96,9 +103,6 @@ TBD
 
 TBD
 
-#### Codex
-
-TBD
 
 ## Development
 
