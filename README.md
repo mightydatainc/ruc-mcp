@@ -78,6 +78,12 @@ Install Docker using the guide for your operating system:
 
 ### Integrating with your AI agent
 
+⚠️ **YOUR AGENTIC AI ENVIRONMENT *MUST* SUPPORT MCP SAMPLING!** ⚠️
+
+"Render Unto Caesar" relies entirely on an MCP capability called ["sampling"](https://modelcontextprotocol.io/specification/2025-11-25/client/sampling). It *will not work* without sampling.
+
+Currently, the only popular agentic AI host that supports sampling is **VS Code (with GitHub Copilot)**.
+
 #### VS Code
 
 Install the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=mightydatainc.ruc-mcp-server).
@@ -91,21 +97,9 @@ Easy as 1-2-3!
 To verify that it was installed correctly, open the Command Palette (Control-Shift-P), type `MCP: List Servers`, hit Enter, and verify "Render Unto Caesar" appears.
 
 
-#### Cursor
-
-Same installation instructions as VS Code. Open the "Extensions" panel, search for "Render Unto Caesar", and hit "Install". After a few minutes, "Render Unto Caesar" should appear under `MCP: List Servers`.
-
-#### Codex
-
-TBD
-
-#### Claude Desktop
-
-TBD
-
 #### Let your MCP client's AI figure it out
 
-This is always a fallback option. Whatever your MCP client or host might be, you can always just tell it to figure out how to launch and connect to this MCP server on its own. It might help to tell the client the following information:
+This is always a fallback option. Whatever your MCP client or host might be (as long as it supports sampling!), you can always just tell it to figure out how to launch and connect to this MCP server on its own. It might help to tell the client the following information:
 
 - RUC talks to its client over STDIO.
 - Its commandline invocation looks like this: 

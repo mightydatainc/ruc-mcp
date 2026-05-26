@@ -24,7 +24,7 @@
     "build": "npm run package:vsix",
     "install": "code --install-extension ./build/ruc-mcp-server.vsix",
     "package:vsix": "node -e \"require('fs').mkdirSync('build',{recursive:true})\" && npx vsce package --out ./build/ruc-mcp-server.vsix",
-    "publish": "npm run vsce:publish && npm run openvsx:publish",
+    "publish": "npm run vsce:publish",
     "vsce:login": "dotenv -e .env -- npx vsce login mightydatainc",
     "vsce:publish": "dotenv -e .env -- npx vsce publish",
     "openvsx:create-namespace": "dotenv -e .env -- npx ovsx create-namespace mightydatainc",
