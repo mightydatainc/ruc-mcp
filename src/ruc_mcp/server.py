@@ -1397,6 +1397,13 @@ async def ruc_execute_semantic_code_workflow(
                 "the data is in (e.g. CSV, JSON, SQL). Not all tasks rely on data sources, "
                 "but those that do will require this information."
                 "\n\n"
+                "If any of the data sources are local files, keep in mind that RUC runs in a "
+                "Docker container with a shared mount point (inside the container it's mounted "
+                "at /workspace). So if you want RUC to be able to access a local file, that "
+                "file needs to be located somewhere under the shared mount point on the host "
+                "machine; and when you tell RUC where the file is, use the path as RUC will "
+                "see it inside the container (e.g. /workspace/customers.csv)."
+                "\n\n"
                 "If the task doesn't require any data sources, leave this blank."
             )
         ),
